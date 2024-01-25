@@ -38,7 +38,7 @@ from nnunetv2.utilities.file_path_utilities import (
 from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
 
-from utils import eprint
+from utils import eprint, Timer
 from tucker import DecompositionAgent
 
 tensorly.set_backend('numpy')
@@ -56,24 +56,24 @@ class DummyFile(object):
 
 
 def predict_from_raw_data(
-        list_of_lists_or_source_folder: Union[str, List[List[str]]],
-        output_folder: str,
-        model_training_output_dir: str,
-        use_folds: Union[Tuple[int, ...], str] = None,
-        tile_step_size: float = 0.5,
-        use_gaussian: bool = True,
-        use_mirroring: bool = True,
-        perform_everything_on_gpu: bool = True,
-        verbose: bool = True,
-        save_probabilities: bool = False,
-        overwrite: bool = True,
-        checkpoint_name: str = 'checkpoint_final.pth',
-        num_processes_preprocessing: int = default_num_processes,
-        num_processes_segmentation_export: int = default_num_processes,
-        folder_with_segs_from_prev_stage: str = None,
-        num_parts: int = 1,
-        part_id: int = 0,
-        device: torch.device = torch.device('cuda'),
+    list_of_lists_or_source_folder: Union[str, List[List[str]]],
+    output_folder: str,
+    model_training_output_dir: str,
+    use_folds: Union[Tuple[int, ...], str] = None,
+    tile_step_size: float = 0.5,
+    use_gaussian: bool = True,
+    use_mirroring: bool = True,
+    perform_everything_on_gpu: bool = True,
+    verbose: bool = True,
+    save_probabilities: bool = False,
+    overwrite: bool = True,
+    checkpoint_name: str = 'checkpoint_final.pth',
+    num_processes_preprocessing: int = default_num_processes,
+    num_processes_segmentation_export: int = default_num_processes,
+    folder_with_segs_from_prev_stage: str = None,
+    num_parts: int = 1,
+    part_id: int = 0,
+    device: torch.device = torch.device('cuda'),
 ):
     print(
         "\n#######################################################################\nPlease cite the following paper "
@@ -240,7 +240,7 @@ def predict_from_raw_data(
     # export_pool = multiprocessing.get_context('spawn').Pool(num_processes_segmentation_export)
     # export_pool = multiprocessing.Pool(num_processes_segmentation_export)
     with multiprocessing.get_context("spawn").Pool(
-            num_processes_segmentation_export
+        num_processes_segmentation_export
     ) as export_pool:
         network = network.to(device)
 
@@ -281,8 +281,9 @@ def predict_from_raw_data(
                             network.load_state_dict(params)
 
                             if APPLY_TUCKER:
-                                network = DecompositionAgent(tucker_args=TUCKER_ARGS)(network)
-
+                                network = DecompositionAgent(tucker_args=TUCKER_ARGS)(
+                                    network
+                                )
 
                             if prediction is None:
                                 prediction = predict_sliding_window_return_logits(
@@ -415,23 +416,16 @@ def predict_from_raw_data(
 
 
 def maybe_mirror_and_predict(
-        network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None
+    network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None
 ) -> torch.Tensor:
-    start = torch.cuda.Event(enable_timing=True)
-    end = torch.cuda.Event(enable_timing=True)
-
-    start.record()
-    prediction = network(x)
-    end.record()
-
-    torch.cuda.synchronize()
-    eprint(start.elapsed_time(end))
+    with Timer():
+        prediction = network(x)
 
     if mirror_axes is not None:
         # check for invalid numbers in mirror_axes
         # x should be 5d for 3d images and 4d for 2d. so the max value of mirror_axes cannot exceed len(x.shape) - 3
         assert (
-                max(mirror_axes) <= len(x.shape) - 3
+            max(mirror_axes) <= len(x.shape) - 3
         ), 'mirror_axes does not match the dimension of the input!'
 
         num_predictons = 2 ** len(mirror_axes)

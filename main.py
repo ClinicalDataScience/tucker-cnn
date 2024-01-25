@@ -6,7 +6,7 @@ from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
 
 import monkey_patch
-from utils import read_nii, get_dice_score
+from utils import read_nii, get_dice_score, Timer
 
 if __name__ == "__main__":
     IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
@@ -16,9 +16,10 @@ if __name__ == "__main__":
     monkey_patch.APPLY_TUCKER = True
     monkey_patch.TUCKER_ARGS = {
         'rank_mode': 'relative',
-        'rank_factor': 0.1,
+        'rank_factor': 1 / 3,
         'rank_min': 16,
-        'decompose': True
+        'decompose': False,
+        'verbose': True,
     }
 
     libs.DummyFile = monkey_patch.DummyFile
@@ -27,7 +28,9 @@ if __name__ == "__main__":
         monkey_patch.maybe_mirror_and_predict
     )
 
-    totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
+    totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
+
+    Timer.report()
 
     seg_true = read_nii(IN_LABEL)
     seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))

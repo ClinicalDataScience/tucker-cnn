@@ -40,7 +40,6 @@ class LayerReplacer:
         self.targets = (Conv3d,)
         self.tucker_args = {} if tucker_args is None else tucker_args
 
-
     def should_replace(self, m: nn.Module) -> bool:
         return isinstance(m, self.targets)
 
