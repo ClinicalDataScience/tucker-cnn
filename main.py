@@ -18,7 +18,7 @@ if __name__ == "__main__":
         'rank_mode': 'relative',
         'rank_factor': 1 / 3,
         'rank_min': 16,
-        'decompose': False,
+        'decompose': True,
         'verbose': True,
     }
 
