@@ -4,7 +4,7 @@ import shutil
 import traceback
 from copy import deepcopy
 from time import sleep
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import numpy as np
 import tensorly
@@ -21,8 +21,11 @@ from batchgenerators.utilities.file_and_folder_operations import (
 )
 from nnunetv2.configuration import default_num_processes
 from nnunetv2.inference.export_prediction import export_prediction_from_softmax
-from nnunetv2.inference.predict_from_raw_data import PreprocessAdapter, \
-    auto_detect_available_folds, load_what_we_need
+from nnunetv2.inference.predict_from_raw_data import (
+    PreprocessAdapter,
+    auto_detect_available_folds,
+    load_what_we_need,
+)
 from nnunetv2.inference.sliding_window_prediction import (
     predict_sliding_window_return_logits,
     compute_gaussian,
@@ -35,16 +38,21 @@ from nnunetv2.utilities.file_path_utilities import (
 from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
 
-
 from utils import eprint
-from tucker import Decomposer
+from tucker import DecompositionAgent
 
 tensorly.set_backend('numpy')
 
+TUCKER_ARGS: Optional[dict] = None
+APPLY_TUCKER = True
+
 
 class DummyFile(object):
-   def write(self, x): pass
-   def flush(self): pass
+    def write(self, x):
+        pass
+
+    def flush(self):
+        pass
 
 
 def predict_from_raw_data(
@@ -271,7 +279,10 @@ def predict_from_raw_data(
                     try:
                         for params in parameters:
                             network.load_state_dict(params)
-                            network = Decomposer()(network)
+
+                            if APPLY_TUCKER:
+                                network = DecompositionAgent(tucker_args=TUCKER_ARGS)(network)
+
 
                             if prediction is None:
                                 prediction = predict_sliding_window_return_logits(
@@ -403,8 +414,9 @@ def predict_from_raw_data(
     )
 
 
-def maybe_mirror_and_predict(network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None) \
-        -> torch.Tensor:
+def maybe_mirror_and_predict(
+        network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None
+) -> torch.Tensor:
     start = torch.cuda.Event(enable_timing=True)
     end = torch.cuda.Event(enable_timing=True)
 
@@ -418,7 +430,9 @@ def maybe_mirror_and_predict(network: nn.Module, x: torch.Tensor, mirror_axes: T
     if mirror_axes is not None:
         # check for invalid numbers in mirror_axes
         # x should be 5d for 3d images and 4d for 2d. so the max value of mirror_axes cannot exceed len(x.shape) - 3
-        assert max(mirror_axes) <= len(x.shape) - 3, 'mirror_axes does not match the dimension of the input!'
+        assert (
+                max(mirror_axes) <= len(x.shape) - 3
+        ), 'mirror_axes does not match the dimension of the input!'
 
         num_predictons = 2 ** len(mirror_axes)
         if 0 in mirror_axes:

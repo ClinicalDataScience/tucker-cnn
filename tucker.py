@@ -17,38 +17,29 @@ from utils import eprint
 tensorly.set_backend('numpy')
 
 
-class Decomposer:
-    def __init__(
-        self,
-        rank_mode: str = 'heuristic',
-        rank: Optional=None,
-        tmp_dir=".decomposed_models/",
-        debug=False,
-    ):
-        self.rank_mode = rank_mode
-        self.rank = rank
-        self.tmp_dir = tmp_dir
-        self.debug = debug
+class DecompositionAgent:
+    def __init__(self, tucker_args: Optional[dict] = None):
+        self.tucker_args = tucker_args
 
-    def __call__(self, model):
-        return self.decomposer(model)
+    def __call__(self, model: nn.Module) -> nn.Module:
+        return self.apply(model)
 
-    def decomposer(self, model, name=None):
+    def apply(self, model: nn.Module) -> nn.Module:
         model = model.cpu()
-        replacer = LayerReplacer(self.rank_mode, self.rank)
+
+        replacer = LayerReplacer(tucker_args=self.tucker_args)
         LayerSurgeon(replacer).operate(model)
-        model = model.cuda()
-        eprint(
-            "Patch test ---------------------------------------------------------------------------------"
-        )
+
+        if torch.cuda.is_available():
+            model = model.cuda()
         return model
 
 
 class LayerReplacer:
-    def __init__(self, rank_mode, rank):
-        self.targets = (Conv3d, )
-        self.rank = rank
-        self.rank_mode = rank_mode
+    def __init__(self, tucker_args: Optional[dict] = None):
+        self.targets = (Conv3d,)
+        self.tucker_args = {} if tucker_args is None else tucker_args
+
 
     def should_replace(self, m: nn.Module) -> bool:
         return isinstance(m, self.targets)
@@ -57,34 +48,74 @@ class LayerReplacer:
         if isinstance(m, Tucker):
             return m
         else:
-            return Tucker(m, self.rank_mode, self.rank)
+            return Tucker(m, **self.tucker_args)
 
 
 class Tucker(nn.Module):
     def __init__(
-            self, m: nn.Module,
-            rank_mode="heuristic",
-            rank_min: Optional[int] = None
+        self,
+        m: nn.Module,
+        rank_mode: str = 'relative',
+        rank_factor: Optional[float] = 1 / 3,
+        rank_min: Optional[int] = None,
+        decompose: bool = True,
+        verbose: bool = True,
     ):
         super().__init__()
         self.rank_mode = rank_mode
+        self.rank_factor = rank_factor
         self.rank_min = rank_min
+        self.decompose = decompose
 
         self.ranks = self.get_ranks(m)
 
+        self.seq = self.get_tucker_net(m)
+
+        if decompose:
+            self.set_weights(m)
+
+        if verbose:
+            eprint(
+                f'Decomposed layer with Tucker. '
+                f'[in, out] = [{m.in_channels:3d},  {m.out_channels:3d}] | '
+                f'core [in, out] = [{self.seq[1].weight.shape[1]:3d},  '
+                f'{self.seq[1].weight.shape[0]:3d}]'
+            )
+
+    def get_ranks(self, m: nn.Module) -> tuple[int, int]:
+        if self.rank_mode == 'relative':
+            assert (
+                self.rank_factor is not None
+            ), 'Argument rank_cr must be set when choosing rank_mode "relative".'
+
+            new_in = int(np.ceil(m.in_channels * self.rank_factor))
+            new_out = int(np.ceil(m.out_channels * self.rank_factor))
+            ranks = [new_out, new_in]
+            ranks = [new_out, new_in]
+
+        elif self.rank_mode == 'vmbf':
+            ranks = estimate_ranks(m)
+
+        elif self.rank_mode == 'fixed':
+            assert (
+                self.rank_min is not None
+            ), 'Argument rank_min must be set when choosing rank_mode "fixed".'
+
+            ranks = [self.rank_min] * 2
+
+        else:
+            raise ValueError(f'Rank mode {self.rank_mode} is unknown.')
+
+        if self.rank_min is not None:
+            ranks = np.maximum(self.rank_min, ranks)
+
+        return ranks
+
+    def get_tucker_net(self, m: nn.Module) -> nn.Sequential:
         use_bias = False if m.bias is None else True
 
-        (middle, (last, first)), rec_errors = partial_tucker(
-            m.weight.data.numpy(), modes=(0, 1), rank=self.ranks, init='svd'
-        )
-        # eprint(first, last)
-
-        middle = torch.from_numpy(middle)
-        first = torch.from_numpy(first)
-        last = torch.from_numpy(last)
-
         m_first = Conv3d(m.in_channels, self.ranks[1], kernel_size=1, bias=False)
-        m_middle = m.__class__(
+        m_core = Conv3d(
             in_channels=self.ranks[1],
             out_channels=self.ranks[0],
             kernel_size=m.kernel_size,
@@ -96,40 +127,23 @@ class Tucker(nn.Module):
         )
         m_last = Conv3d(self.ranks[0], m.out_channels, kernel_size=1, bias=use_bias)
 
-        m_first.weight.data = (
+        return nn.Sequential(m_first, m_core, m_last)
+
+    def set_weights(self, m: nn.Module) -> None:
+        (core, (last, first)), _ = partial_tucker(
+            tensor=m.weight.data.numpy(), modes=(0, 1), rank=self.ranks, init='svd'
+        )
+
+        core = torch.from_numpy(core)
+        first = torch.from_numpy(first)
+        last = torch.from_numpy(last)
+
+        self.seq[0].weight.data = (
             torch.transpose(first, 1, 0).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
         )
-        m_middle.weight.data = middle
-        m_last.weight.data = last.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
-        m_last.bias.data = m_last.bias.data
-
-        self.seq = nn.Sequential(m_first, m_middle, m_last)
-
-        eprint('Decomposed layer. Rank: ', self.ranks, m)
-
-    def get_ranks(self, m: nn.Module) -> tuple[int, int]:
-        if self.rank_mode == 'heuristic':
-            r3 = int(np.ceil(m.in_channels / 3))  # s/3
-            r4 = int(np.ceil(m.out_channels / 3))  # t/3
-            ranks = [r4, r3]
-            ranks = np.maximum(16, ranks)
-        elif self.rank_mode == 'vmbf':
-            ranks = estimate_ranks(m)
-
-        elif self.rank_mode == 'vmbf_min':
-            ranks = estimate_ranks(m)
-            if self.rank_min is None:
-                self.rank_min = 64
-            ranks = np.maximum(self.rank_min, ranks)
-
-        elif self.rank_mode == 'fixed':
-            ranks = [self.rank_min] * 2
-
-        else:
-            print('rank mode not defined')
-            sys.exit()
-
-        return ranks
+        self.seq[1].weight.data = core
+        self.seq[2].weight.data = last.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+        self.seq[2].bias.data = m.bias.data
 
     def forward(self, x):
         return self.seq(x)
