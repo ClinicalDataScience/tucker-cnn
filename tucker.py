@@ -91,7 +91,6 @@ class Tucker(nn.Module):
             new_in = int(np.ceil(m.in_channels * self.rank_factor))
             new_out = int(np.ceil(m.out_channels * self.rank_factor))
             ranks = [new_out, new_in]
-            ranks = [new_out, new_in]
 
         elif self.rank_mode == 'vmbf':
             ranks = estimate_ranks(m)
