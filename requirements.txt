@@ -1,0 +1,7 @@
+totalsegmentator
+tensorly
+fvcore
+tqdm
+SimpleITK
+scipy
+torchinfo

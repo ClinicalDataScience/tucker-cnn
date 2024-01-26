@@ -5,8 +5,8 @@ from nnunetv2.inference import sliding_window_prediction
 from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
 
-import monkey_patch
-from utils import read_nii, get_dice_score, Timer
+from tuckercnn import monkey_patch
+from tuckercnn.utils import read_nii, get_dice_score, Timer
 
 if __name__ == "__main__":
     IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
@@ -14,6 +14,7 @@ if __name__ == "__main__":
     OUT_PATH = 'output'
 
     monkey_patch.APPLY_TUCKER = True
+    monkey_patch.BS = 8
     monkey_patch.TUCKER_ARGS = {
         'rank_mode': 'relative',
         'rank_factor': 1 / 3,

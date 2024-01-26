@@ -1,6 +1,3 @@
-import sys
-
-import sys
 from typing import Optional
 
 import numpy as np
@@ -10,16 +7,18 @@ from tensorly.decomposition import partial_tucker
 from torch import nn
 from torch.nn import Conv3d
 
-import VBMF
+import tuckercnn.VBMF as VBMF
 
-from utils import eprint
+from tuckercnn.utils import eprint
 
 tensorly.set_backend('numpy')
 
 
 class DecompositionAgent:
-    def __init__(self, tucker_args: Optional[dict] = None):
+    def __init__(self, tucker_args: Optional[dict] = None, saved_model=False):
         self.tucker_args = tucker_args
+        self.saved_model = saved_model
+        #self.saved_ranks = saved_ranks
 
     def __call__(self, model: nn.Module) -> nn.Module:
         return self.apply(model)
@@ -27,8 +26,16 @@ class DecompositionAgent:
     def apply(self, model: nn.Module) -> nn.Module:
         model = model.cpu()
 
-        replacer = LayerReplacer(tucker_args=self.tucker_args)
-        LayerSurgeon(replacer).operate(model)
+        if self.saved_model:
+            self.tucker_args['decompose'] = False
+            replacer = LayerReplacer(tucker_args=self.tucker_args)
+            LayerSurgeon(replacer).operate(model)
+            model.load_state_dict(torch.load('/home/jakob/.totalsegmentator/tucker/model.pt'))
+            model.eval()
+        else:
+            replacer = LayerReplacer(tucker_args=self.tucker_args)
+            LayerSurgeon(replacer).operate(model)
+            torch.save(model.state_dict(),'/home/jakob/.totalsegmentator/tucker/model.pt')
 
         if torch.cuda.is_available():
             model = model.cuda()
@@ -66,12 +73,13 @@ class Tucker(nn.Module):
         self.rank_min = rank_min
         self.decompose = decompose
 
-        self.ranks = self.get_ranks(m)
-
-        self.seq = self.get_tucker_net(m)
-
         if decompose:
+            self.ranks = self.get_ranks(m)
+            self.seq = self.get_tucker_net(m)
             self.set_weights(m)
+        else:
+            self.ranks = self.get_ranks(m)
+            self.seq = self.get_tucker_net(m)
 
         if verbose:
             eprint(
@@ -112,10 +120,10 @@ class Tucker(nn.Module):
     def get_tucker_net(self, m: nn.Module) -> nn.Sequential:
         use_bias = False if m.bias is None else True
 
-        m_first = Conv3d(m.in_channels, self.ranks[1], kernel_size=1, bias=False)
+        m_first = Conv3d(m.in_channels, int(self.ranks[1]), kernel_size=1, bias=False)
         m_core = Conv3d(
-            in_channels=self.ranks[1],
-            out_channels=self.ranks[0],
+            in_channels=int(self.ranks[1]),
+            out_channels=int(self.ranks[0]),
             kernel_size=m.kernel_size,
             bias=False,
             stride=m.stride,
@@ -123,7 +131,7 @@ class Tucker(nn.Module):
             dilation=m.dilation,
             groups=m.groups,
         )
-        m_last = Conv3d(self.ranks[0], m.out_channels, kernel_size=1, bias=use_bias)
+        m_last = Conv3d(int(self.ranks[0]), m.out_channels, kernel_size=1, bias=use_bias)
 
         return nn.Sequential(m_first, m_core, m_last)
 
