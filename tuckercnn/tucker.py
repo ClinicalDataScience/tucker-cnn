@@ -18,7 +18,7 @@ class DecompositionAgent:
     def __init__(self, tucker_args: Optional[dict] = None, saved_model=False):
         self.tucker_args = tucker_args
         self.saved_model = saved_model
-        #self.saved_ranks = saved_ranks
+        # self.saved_ranks = saved_ranks
 
     def __call__(self, model: nn.Module) -> nn.Module:
         return self.apply(model)
@@ -30,15 +30,20 @@ class DecompositionAgent:
             self.tucker_args['decompose'] = False
             replacer = LayerReplacer(tucker_args=self.tucker_args)
             LayerSurgeon(replacer).operate(model)
-            model.load_state_dict(torch.load('/home/jakob/.totalsegmentator/tucker/model.pt'))
+            model.load_state_dict(
+                torch.load('/home/jakob/.totalsegmentator/tucker/model.pt')
+            )
             model.eval()
         else:
             replacer = LayerReplacer(tucker_args=self.tucker_args)
             LayerSurgeon(replacer).operate(model)
-            torch.save(model.state_dict(),'/home/jakob/.totalsegmentator/tucker/model.pt')
+            torch.save(
+                model.state_dict(), '/home/jakob/.totalsegmentator/tucker/model.pt'
+            )
 
         if torch.cuda.is_available():
             model = model.cuda()
+
         return model
 
 
@@ -131,7 +136,9 @@ class Tucker(nn.Module):
             dilation=m.dilation,
             groups=m.groups,
         )
-        m_last = Conv3d(int(self.ranks[0]), m.out_channels, kernel_size=1, bias=use_bias)
+        m_last = Conv3d(
+            int(self.ranks[0]), m.out_channels, kernel_size=1, bias=use_bias
+        )
 
         return nn.Sequential(m_first, m_core, m_last)
 

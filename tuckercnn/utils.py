@@ -21,6 +21,13 @@ def get_dice_score(mask1, mask2):
     return dice_score
 
 
+def get_batch_iterable(iterable, n):
+    # from https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
+    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
+    return zip(*[iter(iterable)] * n)
+
+
+
 class Timer:
     execution_times = []
     verbose = True
@@ -47,8 +54,12 @@ class Timer:
 
     @classmethod
     def report(cls) -> None:
-        mean = float(np.mean(cls.execution_times[cls.warm_up_rounds:]))
-        std = float(np.std(cls.execution_times[cls.warm_up_rounds:]))
+        if len(cls.execution_times) == 0:
+            print('Nothing to report. No times were recorded.')
+            return
+
+        mean = float(np.mean(cls.execution_times[cls.warm_up_rounds :]))
+        std = float(np.std(cls.execution_times[cls.warm_up_rounds :]))
 
         print(
             f'Execution took {mean:.2f}±{std:.2f}ms over '

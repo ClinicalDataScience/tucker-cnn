@@ -8,21 +8,25 @@ from totalsegmentator.python_api import totalsegmentator
 from tuckercnn import monkey_patch
 from tuckercnn.utils import read_nii, get_dice_score, Timer
 
-if __name__ == "__main__":
-    IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
-    IN_LABEL = 'data/spleen/labelsTr/spleen_2.nii.gz'
-    OUT_PATH = 'output'
+# PARAMETERS
+# --------------------------------------------------------------------------------------
+IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
+IN_LABEL = 'data/spleen/labelsTr/spleen_2.nii.gz'
+OUT_PATH = 'output'
 
-    monkey_patch.APPLY_TUCKER = True
-    monkey_patch.BS = 8
-    monkey_patch.TUCKER_ARGS = {
-        'rank_mode': 'relative',
-        'rank_factor': 1 / 3,
-        'rank_min': 16,
-        'decompose': True,
-        'verbose': True,
-    }
+monkey_patch.APPLY_TUCKER = True
+monkey_patch.INFERENCE_BS = 8
+monkey_patch.TUCKER_ARGS = {
+    'rank_mode': 'relative',
+    'rank_factor': 1 / 3,
+    'rank_min': 16,
+    'decompose': True,
+    'verbose': True,
+}
+# --------------------------------------------------------------------------------------
 
+
+def main() -> None:
     libs.DummyFile = monkey_patch.DummyFile
     predict_from_raw_data.predict_from_raw_data = monkey_patch.predict_from_raw_data
     sliding_window_prediction.maybe_mirror_and_predict = (
@@ -35,4 +39,8 @@ if __name__ == "__main__":
 
     seg_true = read_nii(IN_LABEL)
     seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
-    print('DSC: ', get_dice_score(seg_true, seg_pred))
+    print(f'Dice Score: {get_dice_score(seg_true, seg_pred):.3f}')
+
+
+if __name__ == "__main__":
+    main()

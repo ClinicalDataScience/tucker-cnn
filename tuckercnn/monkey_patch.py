@@ -1,7 +1,7 @@
-import time
 import multiprocessing
 import shutil
 import traceback
+import warnings
 from copy import deepcopy
 from time import sleep
 from typing import Tuple, Union, Optional
@@ -9,7 +9,7 @@ from typing import Tuple, Union, Optional
 import numpy as np
 import tensorly
 import torch
-from torch import nn
+from acvl_utils.cropping_and_padding.padding import pad_nd_image
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.transforms.utility_transforms import NumpyToTensor
 from batchgenerators.utilities.file_and_folder_operations import *
@@ -27,7 +27,7 @@ from nnunetv2.inference.predict_from_raw_data import (
     load_what_we_need,
 )
 from nnunetv2.inference.sliding_window_prediction import (
-    # predict_sliding_window_return_logits,
+    get_sliding_window_generator,
     compute_gaussian,
 )
 from nnunetv2.utilities.file_path_utilities import (
@@ -35,23 +35,19 @@ from nnunetv2.utilities.file_path_utilities import (
     should_i_save_to_file,
     check_workers_busy,
 )
+from nnunetv2.utilities.helpers import empty_cache, dummy_context
 from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
+from torch import nn
 
-import warnings
-from nnunetv2.utilities.helpers import empty_cache, dummy_context
-from nnunetv2.inference.sliding_window_prediction import get_sliding_window_generator, compute_gaussian, \
-    compute_steps_for_sliding_window
-from acvl_utils.cropping_and_padding.padding import pad_nd_image
-
-from tuckercnn.utils import eprint, Timer
 from tuckercnn.tucker import DecompositionAgent
+from tuckercnn.utils import Timer, get_batch_iterable
 
 tensorly.set_backend('numpy')
 
 TUCKER_ARGS: Optional[dict] = None
 APPLY_TUCKER = True
-BS = 1
+INFERENCE_BS = 1
 
 
 class DummyFile(object):
@@ -63,24 +59,24 @@ class DummyFile(object):
 
 
 def predict_from_raw_data(
-        list_of_lists_or_source_folder: Union[str, List[List[str]]],
-        output_folder: str,
-        model_training_output_dir: str,
-        use_folds: Union[Tuple[int, ...], str] = None,
-        tile_step_size: float = 0.5,
-        use_gaussian: bool = True,
-        use_mirroring: bool = True,
-        perform_everything_on_gpu: bool = True,
-        verbose: bool = True,
-        save_probabilities: bool = False,
-        overwrite: bool = True,
-        checkpoint_name: str = 'checkpoint_final.pth',
-        num_processes_preprocessing: int = default_num_processes,
-        num_processes_segmentation_export: int = default_num_processes,
-        folder_with_segs_from_prev_stage: str = None,
-        num_parts: int = 1,
-        part_id: int = 0,
-        device: torch.device = torch.device('cuda'),
+    list_of_lists_or_source_folder: Union[str, List[List[str]]],
+    output_folder: str,
+    model_training_output_dir: str,
+    use_folds: Union[Tuple[int, ...], str] = None,
+    tile_step_size: float = 0.5,
+    use_gaussian: bool = True,
+    use_mirroring: bool = True,
+    perform_everything_on_gpu: bool = True,
+    verbose: bool = True,
+    save_probabilities: bool = False,
+    overwrite: bool = True,
+    checkpoint_name: str = 'checkpoint_final.pth',
+    num_processes_preprocessing: int = default_num_processes,
+    num_processes_segmentation_export: int = default_num_processes,
+    folder_with_segs_from_prev_stage: str = None,
+    num_parts: int = 1,
+    part_id: int = 0,
+    device: torch.device = torch.device('cuda'),
 ):
     print(
         "\n#######################################################################\nPlease cite the following paper "
@@ -247,7 +243,7 @@ def predict_from_raw_data(
     # export_pool = multiprocessing.get_context('spawn').Pool(num_processes_segmentation_export)
     # export_pool = multiprocessing.Pool(num_processes_segmentation_export)
     with multiprocessing.get_context("spawn").Pool(
-            num_processes_segmentation_export
+        num_processes_segmentation_export
     ) as export_pool:
         network = network.to(device)
 
@@ -288,9 +284,9 @@ def predict_from_raw_data(
                             network.load_state_dict(params)
 
                             if APPLY_TUCKER:
-                                network = DecompositionAgent(tucker_args=TUCKER_ARGS, saved_model=True)(
-                                    network
-                                )
+                                network = DecompositionAgent(
+                                    tucker_args=TUCKER_ARGS, saved_model=True
+                                )(network)
 
                             if prediction is None:
                                 prediction = predict_sliding_window_return_logits(
@@ -423,17 +419,16 @@ def predict_from_raw_data(
 
 
 def maybe_mirror_and_predict(
-        network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None
+    network: nn.Module, x: torch.Tensor, mirror_axes: Tuple[int, ...] = None
 ) -> torch.Tensor:
     with Timer():
-
         prediction = network(x)
 
     if mirror_axes is not None:
         # check for invalid numbers in mirror_axes
         # x should be 5d for 3d images and 4d for 2d. so the max value of mirror_axes cannot exceed len(x.shape) - 3
         assert (
-                max(mirror_axes) <= len(x.shape) - 3
+            max(mirror_axes) <= len(x.shape) - 3
         ), 'mirror_axes does not match the dimension of the input!'
 
         num_predictons = 2 ** len(mirror_axes)
@@ -454,27 +449,23 @@ def maybe_mirror_and_predict(
         prediction /= num_predictons
     return prediction
 
-
-def grouped(iterable, n):
-    # from https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
-    "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
-    return zip(*[iter(iterable)] * n)
-
-
-def predict_sliding_window_return_logits(network: nn.Module,
-                                         input_image: Union[np.ndarray, torch.Tensor],
-                                         num_segmentation_heads: int,
-                                         tile_size: Tuple[int, ...],
-                                         mirror_axes: Tuple[int, ...] = None,
-                                         tile_step_size: float = 0.5,
-                                         use_gaussian: bool = True,
-                                         precomputed_gaussian: torch.Tensor = None,
-                                         perform_everything_on_gpu: bool = True,
-                                         verbose: bool = True,
-                                         device: torch.device = torch.device('cuda')) -> Union[
-    np.ndarray, torch.Tensor]:
+def predict_sliding_window_return_logits(
+    network: nn.Module,
+    input_image: Union[np.ndarray, torch.Tensor],
+    num_segmentation_heads: int,
+    tile_size: Tuple[int, ...],
+    mirror_axes: Tuple[int, ...] = None,
+    tile_step_size: float = 0.5,
+    use_gaussian: bool = True,
+    precomputed_gaussian: torch.Tensor = None,
+    perform_everything_on_gpu: bool = True,
+    verbose: bool = True,
+    device: torch.device = torch.device('cuda'),
+) -> Union[np.ndarray, torch.Tensor]:
     if perform_everything_on_gpu:
-        assert device.type == 'cuda', 'Can use perform_everything_on_gpu=True only when device="cuda"'
+        assert (
+            device.type == 'cuda'
+        ), 'Can use perform_everything_on_gpu=True only when device="cuda"'
 
     network = network.to(device)
     network.eval()
@@ -486,18 +477,28 @@ def predict_sliding_window_return_logits(network: nn.Module,
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with torch.autocast(device.type, enabled=True) if device.type == 'cuda' else dummy_context():
-            assert len(input_image.shape) == 4, 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'
+        with torch.autocast(
+            device.type, enabled=True
+        ) if device.type == 'cuda' else dummy_context():
+            assert (
+                len(input_image.shape) == 4
+            ), 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'
 
             if not torch.cuda.is_available():
                 if perform_everything_on_gpu:
-                    print('WARNING! "perform_everything_on_gpu" was True but cuda is not available! Set it to False...')
+                    print(
+                        'WARNING! "perform_everything_on_gpu" was True but cuda is not available! Set it to False...'
+                    )
                 perform_everything_on_gpu = False
 
-            results_device = device if perform_everything_on_gpu else torch.device('cpu')
+            results_device = (
+                device if perform_everything_on_gpu else torch.device('cpu')
+            )
 
-            if verbose: print("step_size:", tile_step_size)
-            if verbose: print("mirror_axes:", mirror_axes)
+            if verbose:
+                print("step_size:", tile_step_size)
+            if verbose:
+                print("mirror_axes:", mirror_axes)
 
             if not isinstance(input_image, torch.Tensor):
                 # pytorch will warn about the numpy array not being writable. This doesnt matter though because we
@@ -507,62 +508,81 @@ def predict_sliding_window_return_logits(network: nn.Module,
                     input_image = torch.from_numpy(input_image)
 
             # if input_image is smaller than tile_size we need to pad it to tile_size.
-            data, slicer_revert_padding = pad_nd_image(input_image, tile_size, 'constant', {'value': 0}, True, None)
+            data, slicer_revert_padding = pad_nd_image(
+                input_image, tile_size, 'constant', {'value': 0}, True, None
+            )
 
             if use_gaussian:
-                gaussian = torch.from_numpy(
-                    compute_gaussian(tile_size,
-                                     sigma_scale=1. / 8)) if precomputed_gaussian is None else precomputed_gaussian
+                gaussian = (
+                    torch.from_numpy(compute_gaussian(tile_size, sigma_scale=1.0 / 8))
+                    if precomputed_gaussian is None
+                    else precomputed_gaussian
+                )
                 gaussian = gaussian.half()
                 # make sure nothing is rounded to zero or we get division by zero :-(
                 mn = gaussian.min()
                 if mn == 0:
                     gaussian.clip_(min=mn)
 
-            slicers = get_sliding_window_generator(data.shape[1:], tile_size, tile_step_size, verbose=verbose)
+            slicers = get_sliding_window_generator(
+                data.shape[1:], tile_size, tile_step_size, verbose=verbose
+            )
 
             # preallocate results and num_predictions. Move everything to the correct device
             try:
-                predicted_logits = torch.zeros((num_segmentation_heads, *data.shape[1:]), dtype=torch.half,
-                                               device=results_device)
-                n_predictions = torch.zeros(data.shape[1:], dtype=torch.half,
-                                            device=results_device)
+                predicted_logits = torch.zeros(
+                    (num_segmentation_heads, *data.shape[1:]),
+                    dtype=torch.half,
+                    device=results_device,
+                )
+                n_predictions = torch.zeros(
+                    data.shape[1:], dtype=torch.half, device=results_device
+                )
                 gaussian = gaussian.to(results_device)
             except RuntimeError:
                 # sometimes the stuff is too large for GPUs. In that case fall back to CPU
                 results_device = torch.device('cpu')
-                predicted_logits = torch.zeros((num_segmentation_heads, *data.shape[1:]), dtype=torch.half,
-                                               device=results_device)
-                n_predictions = torch.zeros(data.shape[1:], dtype=torch.half,
-                                            device=results_device)
+                predicted_logits = torch.zeros(
+                    (num_segmentation_heads, *data.shape[1:]),
+                    dtype=torch.half,
+                    device=results_device,
+                )
+                n_predictions = torch.zeros(
+                    data.shape[1:], dtype=torch.half, device=results_device
+                )
                 gaussian = gaussian.to(results_device)
             finally:
                 empty_cache(device)
 
-            bs = BS
-
-            if bs == 1:
+            if INFERENCE_BS == 1:
                 for sl in slicers:
                     workon = data[sl][None]
                     workon = workon.to(device, non_blocking=False)
 
-                    prediction = maybe_mirror_and_predict(network, workon, mirror_axes)[0].to(results_device)
+                    prediction = maybe_mirror_and_predict(network, workon, mirror_axes)[
+                        0
+                    ].to(results_device)
 
-                    predicted_logits[sl] += (prediction * gaussian if use_gaussian else prediction)
-                    n_predictions[sl[1:]] += (gaussian if use_gaussian else 1)
+                    predicted_logits[sl] += (
+                        prediction * gaussian if use_gaussian else prediction
+                    )
+                    n_predictions[sl[1:]] += gaussian if use_gaussian else 1
 
             else:
-                for sl in grouped(slicers, bs):
+                for sl in get_batch_iterable(slicers, INFERENCE_BS):
                     dd = [data[m][None] for m in sl]
                     workon = torch.cat(dd, dim=0)
                     workon = workon.to(device, non_blocking=False)
 
-                    prediction = maybe_mirror_and_predict(network, workon, mirror_axes).to(results_device)
-                    for k in range(bs):
-                        predicted_logits[sl[k]] += (prediction[k] * gaussian if use_gaussian else prediction[k])
-                        n_predictions[sl[k][1:]] += (gaussian if use_gaussian else 1)
+                    prediction = maybe_mirror_and_predict(
+                        network, workon, mirror_axes
+                    ).to(results_device)
+                    for k in range(INFERENCE_BS):
+                        predicted_logits[sl[k]] += (
+                            prediction[k] * gaussian if use_gaussian else prediction[k]
+                        )
+                        n_predictions[sl[k][1:]] += gaussian if use_gaussian else 1
 
             predicted_logits /= n_predictions
-    #eprint(predicted_logits.shape)
     empty_cache(device)
     return predicted_logits[tuple([slice(None), *slicer_revert_padding[1:]])]
