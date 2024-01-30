@@ -1,8 +1,13 @@
 import sys
 
+from dynamic_network_architectures.building_blocks.simple_conv_blocks import (
+    ConvDropoutNormReLU,
+)
+from dynamic_network_architectures.building_blocks.unet_decoder import UNetDecoder
 import numpy as np
 import SimpleITK as sitk
 import torch
+from torch import nn
 
 
 def eprint(*args, **kwargs):
@@ -25,7 +30,6 @@ def get_batch_iterable(iterable, n):
     # from https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
     "s -> (s0,s1,s2,...sn-1), (sn,sn+1,sn+2,...s2n-1), (s2n,s2n+1,s2n+2,...s3n-1), ..."
     return zip(*[iter(iterable)] * n)
-
 
 
 class Timer:
@@ -77,3 +81,23 @@ class Timer:
     @classmethod
     def reset(cls) -> None:
         cls.execution_times.clear()
+
+
+def streamline_nnunet_architecture(network: nn.Module) -> nn.Module:
+    """Removes redundant attributes from the network."""
+    for m in network.modules():
+        if isinstance(m, ConvDropoutNormReLU):
+            if hasattr(m, 'conv'):
+                delattr(m, 'conv')
+            if hasattr(m, 'dropout'):
+                delattr(m, 'dropout')
+            if hasattr(m, 'norm'):
+                delattr(m, 'norm')
+            if hasattr(m, 'nonlin'):
+                delattr(m, 'nonlin')
+
+        if isinstance(m, UNetDecoder):
+            if not m.deep_supervision:
+                m.seg_layers = nn.ModuleList([m.seg_layers[-1]])
+
+    return network
