@@ -1,3 +1,5 @@
+"""Code taken and adapted from https://github.com/CasvandenBogaard/VBMF"""
+
 from __future__ import division
 
 import numpy as np
