@@ -6,6 +6,7 @@ from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
 
 from tuckercnn import monkey_patch
+from tuckercnn.monkey_patch import MonkeyManager
 from tuckercnn.utils import read_nii, get_dice_score, Timer
 
 # PARAMETERS
@@ -14,9 +15,9 @@ IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
 IN_LABEL = 'data/spleen/labelsTr/spleen_2.nii.gz'
 OUT_PATH = 'output'
 
-monkey_patch.APPLY_TUCKER = True
-monkey_patch.INFERENCE_BS = 8
-monkey_patch.TUCKER_ARGS = {
+MonkeyManager.apply_tucker = True
+MonkeyManager.inference_bs = 1
+MonkeyManager.tucker_args = {
     'rank_mode': 'relative',
     'rank_factor': 1 / 3,
     'rank_min': 16,

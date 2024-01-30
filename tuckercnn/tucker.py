@@ -37,9 +37,9 @@ class DecompositionAgent:
         else:
             replacer = LayerReplacer(tucker_args=self.tucker_args)
             LayerSurgeon(replacer).operate(model)
-            torch.save(
-                model.state_dict(), '/home/jakob/.totalsegmentator/tucker/model.pt'
-            )
+            # torch.save(
+            #     model.state_dict(), '/home/jakob/.totalsegmentator/tucker/model.pt'
+            # )
 
         if torch.cuda.is_available():
             model = model.cuda()
@@ -119,6 +119,8 @@ class Tucker(nn.Module):
 
         if self.rank_min is not None:
             ranks = np.maximum(self.rank_min, ranks)
+            ranks[1] = min(m.in_channels, ranks[1])
+            ranks[0] = min(m.out_channels, ranks[0])
 
         return ranks
 

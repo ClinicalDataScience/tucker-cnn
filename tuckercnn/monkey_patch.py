@@ -3,6 +3,7 @@ import shutil
 import traceback
 import warnings
 from copy import deepcopy
+from dataclasses import dataclass
 from time import sleep
 from typing import Tuple, Union, Optional
 
@@ -45,9 +46,12 @@ from tuckercnn.utils import Timer, get_batch_iterable
 
 tensorly.set_backend('numpy')
 
-TUCKER_ARGS: Optional[dict] = None
-APPLY_TUCKER = True
-INFERENCE_BS = 1
+
+@dataclass
+class MonkeyManager:
+    tucker_args: Optional[dict] = None
+    apply_tucker = True
+    inference_bs = 1
 
 
 class DummyFile(object):
@@ -283,9 +287,10 @@ def predict_from_raw_data(
                         for params in parameters:
                             network.load_state_dict(params)
 
-                            if APPLY_TUCKER:
+                            if MonkeyManager.apply_tucker:
                                 network = DecompositionAgent(
-                                    tucker_args=TUCKER_ARGS, saved_model=True
+                                    tucker_args=MonkeyManager.tucker_args,
+                                    saved_model=True,
                                 )(network)
 
                             if prediction is None:
@@ -449,6 +454,7 @@ def maybe_mirror_and_predict(
         prediction /= num_predictons
     return prediction
 
+
 def predict_sliding_window_return_logits(
     network: nn.Module,
     input_image: Union[np.ndarray, torch.Tensor],
@@ -554,7 +560,7 @@ def predict_sliding_window_return_logits(
             finally:
                 empty_cache(device)
 
-            if INFERENCE_BS == 1:
+            if MonkeyManager.inference_bs == 1:
                 for sl in slicers:
                     workon = data[sl][None]
                     workon = workon.to(device, non_blocking=False)
@@ -569,7 +575,7 @@ def predict_sliding_window_return_logits(
                     n_predictions[sl[1:]] += gaussian if use_gaussian else 1
 
             else:
-                for sl in get_batch_iterable(slicers, INFERENCE_BS):
+                for sl in get_batch_iterable(slicers, MonkeyManager.inference_bs):
                     dd = [data[m][None] for m in sl]
                     workon = torch.cat(dd, dim=0)
                     workon = workon.to(device, non_blocking=False)
@@ -577,7 +583,7 @@ def predict_sliding_window_return_logits(
                     prediction = maybe_mirror_and_predict(
                         network, workon, mirror_axes
                     ).to(results_device)
-                    for k in range(INFERENCE_BS):
+                    for k in range(MonkeyManager.inference_bs):
                         predicted_logits[sl[k]] += (
                             prediction[k] * gaussian if use_gaussian else prediction[k]
                         )
