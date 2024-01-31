@@ -42,7 +42,8 @@ from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
 from torch import nn
 
 from tuckercnn.tucker import DecompositionAgent
-from tuckercnn.utils import Timer, get_batch_iterable
+from tuckercnn.utils import get_batch_iterable
+from tuckercnn.timer import Timer
 
 tensorly.set_backend('numpy')
 
@@ -181,9 +182,11 @@ def predict_from_raw_data(
 
     output_filename_truncated = [join(output_folder, i) for i in caseids]
     seg_from_prev_stage_files = [
-        join(folder_with_segs_from_prev_stage, i + dataset_json['file_ending'])
-        if folder_with_segs_from_prev_stage is not None
-        else None
+        (
+            join(folder_with_segs_from_prev_stage, i + dataset_json['file_ending'])
+            if folder_with_segs_from_prev_stage is not None
+            else None
+        )
         for i in caseids
     ]
     # remove already predicted files form the lists
@@ -299,9 +302,11 @@ def predict_from_raw_data(
                                     data,
                                     num_seg_heads,
                                     configuration_manager.patch_size,
-                                    mirror_axes=inference_allowed_mirroring_axes
-                                    if use_mirroring
-                                    else None,
+                                    mirror_axes=(
+                                        inference_allowed_mirroring_axes
+                                        if use_mirroring
+                                        else None
+                                    ),
                                     tile_step_size=tile_step_size,
                                     use_gaussian=use_gaussian,
                                     precomputed_gaussian=inference_gaussian,
@@ -315,9 +320,11 @@ def predict_from_raw_data(
                                     data,
                                     num_seg_heads,
                                     configuration_manager.patch_size,
-                                    mirror_axes=inference_allowed_mirroring_axes
-                                    if use_mirroring
-                                    else None,
+                                    mirror_axes=(
+                                        inference_allowed_mirroring_axes
+                                        if use_mirroring
+                                        else None
+                                    ),
                                     tile_step_size=tile_step_size,
                                     use_gaussian=use_gaussian,
                                     precomputed_gaussian=inference_gaussian,
@@ -348,9 +355,11 @@ def predict_from_raw_data(
                                 data,
                                 num_seg_heads,
                                 configuration_manager.patch_size,
-                                mirror_axes=inference_allowed_mirroring_axes
-                                if use_mirroring
-                                else None,
+                                mirror_axes=(
+                                    inference_allowed_mirroring_axes
+                                    if use_mirroring
+                                    else None
+                                ),
                                 tile_step_size=tile_step_size,
                                 use_gaussian=use_gaussian,
                                 precomputed_gaussian=inference_gaussian,
@@ -364,9 +373,11 @@ def predict_from_raw_data(
                                 data,
                                 num_seg_heads,
                                 configuration_manager.patch_size,
-                                mirror_axes=inference_allowed_mirroring_axes
-                                if use_mirroring
-                                else None,
+                                mirror_axes=(
+                                    inference_allowed_mirroring_axes
+                                    if use_mirroring
+                                    else None
+                                ),
                                 tile_step_size=tile_step_size,
                                 use_gaussian=use_gaussian,
                                 precomputed_gaussian=inference_gaussian,
@@ -483,9 +494,11 @@ def predict_sliding_window_return_logits(
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with torch.autocast(
-            device.type, enabled=True
-        ) if device.type == 'cuda' else dummy_context():
+        with (
+            torch.autocast(device.type, enabled=True)
+            if device.type == 'cuda'
+            else dummy_context()
+        ):
             assert (
                 len(input_image.shape) == 4
             ), 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'

@@ -5,7 +5,8 @@ from fvcore.nn import FlopCountAnalysis, flop_count_table, parameter_count
 from nnunetv2.inference.predict_from_raw_data import load_what_we_need
 
 from tuckercnn.tucker import DecompositionAgent
-from tuckercnn.utils import Timer, streamline_nnunet_architecture
+from tuckercnn.utils import streamline_nnunet_architecture
+from tuckercnn.timer import Timer
 
 MODEL_OUTPUT_DIR = (
     '.totalsegmentator/nnunet/results/'
@@ -24,7 +25,7 @@ TUCKER_ARGS = {
 BENCHMARK_ARGS = {
     'patch_size': (1, 112, 112, 128),
     'batch_size': 1,
-    'device': 'cuda',
+    'device': 'cudaq',
     'load_params': False,
     'apply_tucker': True,
     'autocast': False,
@@ -74,6 +75,7 @@ def main() -> None:
         network = torch.compile(network)
 
     print('Measuring forward pass time ...')
+    Timer.use_cuda = False if BENCHMARK_ARGS['device'] == 'cpu' else True
 
     with torch.autocast(BENCHMARK_ARGS['device'], enabled=BENCHMARK_ARGS['autocast']):
         for i in range(BENCHMARK_ARGS['eval_passes'] + 1):

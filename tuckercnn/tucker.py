@@ -15,10 +15,20 @@ tensorly.set_backend('numpy')
 
 
 class DecompositionAgent:
-    def __init__(self, tucker_args: Optional[dict] = None, saved_model=False):
+    rank_cache: list[tuple[int, int]] = []
+
+    def __init__(
+        self,
+        tucker_args: Optional[dict] = None,
+        ckpt_path: str = '',
+        save_model: bool = False,
+        load_model: bool = False,
+    ):
         self.tucker_args = tucker_args
-        self.saved_model = saved_model
-        # self.saved_ranks = saved_ranks
+
+        self.ckpt_path = ckpt_path
+        self.save_model = save_model
+        self.load_model = load_model
 
     def __call__(self, model: nn.Module) -> nn.Module:
         return self.apply(model)
@@ -26,7 +36,7 @@ class DecompositionAgent:
     def apply(self, model: nn.Module) -> nn.Module:
         model = model.cpu()
 
-        if self.saved_model:
+        if self.save_model:
             self.tucker_args['decompose'] = False
             replacer = LayerReplacer(tucker_args=self.tucker_args)
             LayerSurgeon(replacer).operate(model)
@@ -122,6 +132,7 @@ class Tucker(nn.Module):
             ranks[1] = min(m.in_channels, ranks[1])
             ranks[0] = min(m.out_channels, ranks[0])
 
+        DecompositionAgent.rank_cache.append(ranks)
         return ranks
 
     def get_tucker_net(self, m: nn.Module) -> nn.Sequential:
@@ -196,7 +207,6 @@ class LayerSurgeon:
         https://discuss.pytorch.org/t/how-to-replace-a-layer-with-own-custom-variant/43586/7
         """
         new_layer: nn.Module
-        # print(module.__class__)
 
         if isinstance(module, Tucker):
             return

@@ -7,7 +7,8 @@ from totalsegmentator.python_api import totalsegmentator
 
 from tuckercnn import monkey_patch
 from tuckercnn.monkey_patch import MonkeyManager
-from tuckercnn.utils import read_nii, get_dice_score, Timer
+from tuckercnn.utils import read_nii, get_dice_score
+from tuckercnn.timer import Timer
 
 # PARAMETERS
 # --------------------------------------------------------------------------------------
