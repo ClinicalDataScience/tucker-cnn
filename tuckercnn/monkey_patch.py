@@ -53,6 +53,9 @@ class MonkeyManager:
     tucker_args: Optional[dict] = None
     apply_tucker = True
     inference_bs = 1
+    ckpt_path = ''
+    save_model = False
+    load_model = False
 
 
 class DummyFile(object):
@@ -293,7 +296,9 @@ def predict_from_raw_data(
                             if MonkeyManager.apply_tucker:
                                 network = DecompositionAgent(
                                     tucker_args=MonkeyManager.tucker_args,
-                                    saved_model=True,
+                                    ckpt_path=MonkeyManager.ckpt_path,
+                                    save_model=MonkeyManager.save_model,
+                                    load_model=MonkeyManager.load_model
                                 )(network)
 
                             if prediction is None:

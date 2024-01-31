@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 import numpy as np
@@ -16,6 +17,8 @@ tensorly.set_backend('numpy')
 
 class DecompositionAgent:
     rank_cache: list[tuple[int, int]] = []
+    save_model = False
+    load_model = False
 
     def __init__(
         self,
@@ -25,10 +28,12 @@ class DecompositionAgent:
         load_model: bool = False,
     ):
         self.tucker_args = tucker_args
-
         self.ckpt_path = ckpt_path
-        self.save_model = save_model
-        self.load_model = load_model
+
+        assert not (save_model and load_model)
+        DecompositionAgent.rank_cache.clear()
+        DecompositionAgent.save_model = save_model
+        DecompositionAgent.load_model = load_model
 
     def __call__(self, model: nn.Module) -> nn.Module:
         return self.apply(model)
@@ -36,20 +41,28 @@ class DecompositionAgent:
     def apply(self, model: nn.Module) -> nn.Module:
         model = model.cpu()
 
-        if self.save_model:
-            self.tucker_args['decompose'] = False
-            replacer = LayerReplacer(tucker_args=self.tucker_args)
-            LayerSurgeon(replacer).operate(model)
-            model.load_state_dict(
-                torch.load('/home/jakob/.totalsegmentator/tucker/model.pt')
-            )
-            model.eval()
-        else:
-            replacer = LayerReplacer(tucker_args=self.tucker_args)
-            LayerSurgeon(replacer).operate(model)
-            # torch.save(
-            #     model.state_dict(), '/home/jakob/.totalsegmentator/tucker/model.pt'
-            # )
+        if DecompositionAgent.load_model:
+            ckpt = torch.load(self.ckpt_path, map_location='cpu')
+            self.tucker_args = ckpt['tucker_args']
+            eprint(f'Passed Tucker arguments are overwritten by checkpoint arguments.')
+            DecompositionAgent.rank_cache = ckpt['ranks'].copy()
+
+        replacer = LayerReplacer(tucker_args=self.tucker_args)
+        LayerSurgeon(replacer).operate(model)
+
+        if DecompositionAgent.load_model:
+            model.load_state_dict(ckpt['state_dict'])
+            eprint(f'Tucker model checkpoint loaded from "{self.ckpt_path}".')
+
+        if DecompositionAgent.save_model:
+            ckpt = {
+                'state_dict': model.state_dict(),
+                'tucker_args': self.tucker_args,
+                'ranks': DecompositionAgent.rank_cache
+            }
+            os.makedirs(os.path.dirname(self.ckpt_path), exist_ok=True)
+            torch.save(ckpt, self.ckpt_path)
+            eprint(f'Tucker model saved under "{self.ckpt_path}".')
 
         if torch.cuda.is_available():
             model = model.cuda()
@@ -88,7 +101,9 @@ class Tucker(nn.Module):
         self.rank_min = rank_min
         self.decompose = decompose
 
-        if decompose:
+        self.add_to_cache = DecompositionAgent.save_model
+
+        if decompose and not DecompositionAgent.load_model:
             self.ranks = self.get_ranks(m)
             self.seq = self.get_tucker_net(m)
             self.set_weights(m)
@@ -105,6 +120,9 @@ class Tucker(nn.Module):
             )
 
     def get_ranks(self, m: nn.Module) -> tuple[int, int]:
+        if DecompositionAgent.load_model:
+            return DecompositionAgent.rank_cache.pop(0)
+
         if self.rank_mode == 'relative':
             assert (
                 self.rank_factor is not None
@@ -132,7 +150,8 @@ class Tucker(nn.Module):
             ranks[1] = min(m.in_channels, ranks[1])
             ranks[0] = min(m.out_channels, ranks[0])
 
-        DecompositionAgent.rank_cache.append(ranks)
+        if self.add_to_cache:
+            DecompositionAgent.rank_cache.append(ranks)
         return ranks
 
     def get_tucker_net(self, m: nn.Module) -> nn.Sequential:

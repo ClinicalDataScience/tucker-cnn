@@ -25,12 +25,15 @@ TUCKER_ARGS = {
 BENCHMARK_ARGS = {
     'patch_size': (1, 112, 112, 128),
     'batch_size': 1,
-    'device': 'cuda',
+    'device': 'cpu',
     'load_params': False,
     'apply_tucker': True,
     'autocast': False,
     'compile': False,
     'eval_passes': 10,
+    'ckpt_path': '.checkpoints/model.ckpt',
+    'save_model': False,
+    'load_model': True,
 }
 
 
@@ -50,7 +53,12 @@ def main() -> None:
         network.load_state_dict(params)
 
     if BENCHMARK_ARGS['apply_tucker']:
-        network = DecompositionAgent(tucker_args=TUCKER_ARGS)(network)
+        network = DecompositionAgent(
+            tucker_args=TUCKER_ARGS,
+            ckpt_path=BENCHMARK_ARGS['ckpt_path'],
+            save_model=BENCHMARK_ARGS['save_model'],
+            load_model=BENCHMARK_ARGS['load_model'],
+        )(network)
 
     network = streamline_nnunet_architecture(network)
     network = network.to(BENCHMARK_ARGS['device'])

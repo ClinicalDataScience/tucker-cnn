@@ -25,6 +25,9 @@ MonkeyManager.tucker_args = {
     'decompose': True,
     'verbose': True,
 }
+MonkeyManager.ckpt_path = ''
+MonkeyManager.save_model = False
+MonkeyManager.load_model = False
 # --------------------------------------------------------------------------------------
 
 
