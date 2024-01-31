@@ -25,7 +25,7 @@ TUCKER_ARGS = {
 BENCHMARK_ARGS = {
     'patch_size': (1, 112, 112, 128),
     'batch_size': 1,
-    'device': 'cudaq',
+    'device': 'cuda',
     'load_params': False,
     'apply_tucker': True,
     'autocast': False,
