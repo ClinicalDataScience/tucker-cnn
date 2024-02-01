@@ -10,7 +10,11 @@ from tuckercnn.timer import Timer
 
 
 @torch.no_grad()
-def exec_benchmark(benchmark_args: dict, tucker_args: dict) -> None:
+def exec_benchmark(
+    benchmark_args: dict, tucker_args: dict, verbose: bool = True
+) -> None:
+    Timer.verbose = verbose
+
     # Load Network
     # ----------------------------------------------------------------------------------
     mostly_useless_stuff = load_what_we_need(
@@ -45,16 +49,18 @@ def exec_benchmark(benchmark_args: dict, tucker_args: dict) -> None:
     )
 
     flops = FlopCountAnalysis(network, x)
-    print(flop_count_table(flops))
-    print(f'Total Giga Flops: {flops.total() / 1000 ** 3:.3f}G')
-    print(f'Number of parameters: {parameter_count(network)[""] / 1e6:.3f}M')
+
+    if verbose:
+        print(flop_count_table(flops))
+        print(f'Total Giga Flops: {flops.total() / 1000 ** 3:.3f}G')
+        print(f'Number of parameters: {parameter_count(network)[""] / 1e6:.3f}M')
+        print('Measuring forward pass time ...')
 
     # Measure execution time
     # ----------------------------------------------------------------------------------
     if benchmark_args['compile']:
         network = torch.compile(network)
 
-    print('Measuring forward pass time ...')
     Timer.use_cuda = False if benchmark_args['device'] == 'cpu' else True
 
     with torch.autocast(benchmark_args['device'], enabled=benchmark_args['autocast']):
@@ -62,4 +68,5 @@ def exec_benchmark(benchmark_args: dict, tucker_args: dict) -> None:
             with Timer():
                 network(x)
 
-    Timer.report()
+    if verbose:
+        Timer.report()

@@ -6,25 +6,25 @@ TS_ROOT = os.path.join(os.environ['HOME'], '.totalsegmentator/nnunet/results')
 
 
 TUCKER_ARGS = {
-    'rank_mode': 'relative',
+    'rank_mode': 'vmbf',
     'rank_factor': 1 / 3,
-    'rank_min': None,
+    'rank_min': 4,
     'decompose': False,
-    'verbose': False,
+    'verbose': True,
 }
 
 BENCHMARK_ARGS = {
     'batch_size': 1,
     'device': 'cpu',
     'load_params': False,
-    'apply_tucker': False,
+    'apply_tucker': True,
     'autocast': False,
     'compile': False,
     'eval_passes': 10,
     'ckpt_path': '.checkpoints/model.ckpt',
     'save_model': False,
     'load_model': False,
-    '3mm': False
+    '3mm': False,
 }
 
 if __name__ == '__main__':

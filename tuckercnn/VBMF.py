@@ -1,5 +1,3 @@
-"""Code taken and adapted from https://github.com/CasvandenBogaard/VBMF"""
-
 from __future__ import division
 
 import numpy as np
@@ -293,7 +291,7 @@ def EVBMF(Y, sigma2=None, H=None):
             bounds=[lower_bound, upper_bound],
             method='Bounded',
         )
-        sigma2 = sigma2_opt.x
+        sigma2 = sigma2_opt.x * 0.5
 
     # Threshold gamma term
     threshold = np.sqrt(M * sigma2 * (1 + tauubar) * (1 + alpha / tauubar))

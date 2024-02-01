@@ -152,6 +152,7 @@ class Tucker(nn.Module):
 
         if self.add_to_cache:
             DecompositionAgent.rank_cache.append(ranks)
+
         return ranks
 
     def get_tucker_net(self, m: nn.Module) -> nn.Sequential:
