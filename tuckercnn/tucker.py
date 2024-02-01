@@ -58,7 +58,7 @@ class DecompositionAgent:
             ckpt = {
                 'state_dict': model.state_dict(),
                 'tucker_args': self.tucker_args,
-                'ranks': DecompositionAgent.rank_cache
+                'ranks': DecompositionAgent.rank_cache,
             }
             os.makedirs(os.path.dirname(self.ckpt_path), exist_ok=True)
             torch.save(ckpt, self.ckpt_path)

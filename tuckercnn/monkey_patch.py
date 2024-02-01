@@ -298,7 +298,7 @@ def predict_from_raw_data(
                                     tucker_args=MonkeyManager.tucker_args,
                                     ckpt_path=MonkeyManager.ckpt_path,
                                     save_model=MonkeyManager.save_model,
-                                    load_model=MonkeyManager.load_model
+                                    load_model=MonkeyManager.load_model,
                                 )(network)
 
                             if prediction is None:
