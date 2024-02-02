@@ -133,3 +133,4 @@ dmypy.json
 output
 .checkpoints
 benchmark_results.csv
+tucker.tar*
