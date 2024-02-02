@@ -71,16 +71,16 @@ class BaseClock(ABC):
 
 class CUDAClock(BaseClock):
     def __init__(self):
-        self.start = torch.cuda.Event(enable_timing=True)
-        self.end = torch.cuda.Event(enable_timing=True)
+        self.start_event = torch.cuda.Event(enable_timing=True)
+        self.end_event = torch.cuda.Event(enable_timing=True)
 
     def start(self) -> None:
-        self.start.record()
+        self.start_event.record()
 
     def stop(self) -> float:
-        self.end.record()
+        self.end_event.record()
         torch.cuda.synchronize()
-        return self.start.elapsed_time(self.end)
+        return self.start_event.elapsed_time(self.end_event)
 
     def __str__(self) -> str:
         return 'CUDA'

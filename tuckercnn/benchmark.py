@@ -1,5 +1,4 @@
-import os
-
+import numpy as np
 import torch
 from fvcore.nn import FlopCountAnalysis, flop_count_table, parameter_count
 from nnunetv2.inference.predict_from_raw_data import load_what_we_need
@@ -12,7 +11,7 @@ from tuckercnn.timer import Timer
 @torch.no_grad()
 def exec_benchmark(
     benchmark_args: dict, tucker_args: dict, verbose: bool = True
-) -> None:
+) -> dict:
     Timer.verbose = verbose
 
     # Load Network
@@ -49,11 +48,13 @@ def exec_benchmark(
     )
 
     flops = FlopCountAnalysis(network, x)
+    flops_total = flops.total() / 1000**3
+    num_params = parameter_count(network)[""] / 1e6
 
     if verbose:
         print(flop_count_table(flops))
-        print(f'Total Giga Flops: {flops.total() / 1000 ** 3:.3f}G')
-        print(f'Number of parameters: {parameter_count(network)[""] / 1e6:.3f}M')
+        print(f'Total Giga Flops: {flops_total:.3f}G')
+        print(f'Number of parameters: {num_params:.3f}M')
         print('Measuring forward pass time ...')
 
     # Measure execution time
@@ -70,3 +71,17 @@ def exec_benchmark(
 
     if verbose:
         Timer.report()
+
+    exec_time_mean = float(np.mean(Timer.execution_times))
+    exec_time_std = float(np.std(Timer.execution_times))
+    device_name = (
+        torch.cuda.get_device_name() if benchmark_args['device'] == 'cuda' else ''
+    )
+
+    return {
+        'g_flops': flops_total,
+        'm_params': num_params,
+        'exec_time_mean': exec_time_mean,
+        'exec_time_std': exec_time_std,
+        'device_name': device_name,
+    }

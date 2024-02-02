@@ -6,18 +6,18 @@ TS_ROOT = os.path.join(os.environ['HOME'], '.totalsegmentator/nnunet/results')
 
 
 TUCKER_ARGS = {
-    'rank_mode': 'vmbf',
+    'rank_mode': 'relative',
     'rank_factor': 1 / 3,
-    'rank_min': 4,
+    'rank_min': None,
     'decompose': False,
-    'verbose': True,
+    'verbose': False,
 }
 
 BENCHMARK_ARGS = {
     'batch_size': 1,
-    'device': 'cpu',
+    'device': 'cuda',
     'load_params': False,
-    'apply_tucker': True,
+    'apply_tucker': False,
     'autocast': False,
     'compile': False,
     'eval_passes': 10,
@@ -43,4 +43,4 @@ if __name__ == '__main__':
 
     BENCHMARK_ARGS['patch_size'] = patch_size
     BENCHMARK_ARGS['nnunet_path'] = os.path.join(TS_ROOT, model_path)
-    exec_benchmark(BENCHMARK_ARGS, TUCKER_ARGS)
+    results = exec_benchmark(BENCHMARK_ARGS, TUCKER_ARGS, True)
