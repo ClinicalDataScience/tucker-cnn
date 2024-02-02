@@ -20,7 +20,7 @@ def read_nii(path):
 def get_dice_score(mask1, mask2):
     overlap = (mask1 * mask2).sum()
     sum = mask1.sum() + mask2.sum()
-    dice_score = 2 * overlap / sum
+    dice_score = 2 * overlap / (sum + 1e-6)
     return dice_score
 
 
