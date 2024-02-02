@@ -48,6 +48,8 @@ def exec_benchmark(
     )
 
     flops = FlopCountAnalysis(network, x)
+    flops.unsupported_ops_warnings(enabled=verbose)
+
     flops_total = flops.total() / 1000**3
     num_params = parameter_count(network)[""] / 1e6
 
@@ -72,12 +74,13 @@ def exec_benchmark(
     if verbose:
         Timer.report()
 
-    exec_time_mean = float(np.mean(Timer.execution_times))
-    exec_time_std = float(np.std(Timer.execution_times))
+    exec_time_mean = float(np.mean(Timer.get_exec_times()))
+    exec_time_std = float(np.std(Timer.get_exec_times()))
     device_name = (
         torch.cuda.get_device_name() if benchmark_args['device'] == 'cuda' else ''
     )
 
+    Timer.reset()
     return {
         'g_flops': flops_total,
         'm_params': num_params,

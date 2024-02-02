@@ -29,13 +29,17 @@ class Timer:
         Timer.execution_times.append(ms)
 
     @classmethod
+    def get_exec_times(cls):
+        return cls.execution_times[cls.warm_up_rounds :]
+
+    @classmethod
     def report(cls) -> None:
         if len(cls.execution_times) == 0:
             print('Nothing to report. No times were recorded.')
             return
 
-        mean = float(np.mean(cls.execution_times[cls.warm_up_rounds :]))
-        std = float(np.std(cls.execution_times[cls.warm_up_rounds :]))
+        mean = float(np.mean(cls.get_exec_times()))
+        std = float(np.std(cls.get_exec_times()))
 
         print(
             f'Execution took {mean:.2f}±{std:.2f}ms over '

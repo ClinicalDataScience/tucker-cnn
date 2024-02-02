@@ -17,7 +17,7 @@ BENCHMARK_ARGS = {
     'batch_size': 1,
     'device': 'cuda',
     'load_params': False,
-    'apply_tucker': False,
+    'apply_tucker': True,
     'autocast': False,
     'compile': False,
     'eval_passes': 10,
@@ -43,4 +43,5 @@ if __name__ == '__main__':
 
     BENCHMARK_ARGS['patch_size'] = patch_size
     BENCHMARK_ARGS['nnunet_path'] = os.path.join(TS_ROOT, model_path)
-    results = exec_benchmark(BENCHMARK_ARGS, TUCKER_ARGS, True)
+
+    exec_benchmark(BENCHMARK_ARGS, TUCKER_ARGS, True)
