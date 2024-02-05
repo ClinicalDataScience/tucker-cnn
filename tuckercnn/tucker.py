@@ -6,7 +6,7 @@ import tensorly
 import torch
 from tensorly.decomposition import partial_tucker
 from torch import nn
-from torch.nn import Conv3d
+from torch.nn import Conv3d, ConvTranspose3d
 
 import tuckercnn.VBMF as VBMF
 
@@ -72,7 +72,7 @@ class DecompositionAgent:
 
 class LayerReplacer:
     def __init__(self, tucker_args: Optional[dict] = None):
-        self.targets = (Conv3d,)
+        self.targets = (Conv3d, ConvTranspose3d)
         self.tucker_args = {} if tucker_args is None else tucker_args
 
     def should_replace(self, m: nn.Module) -> bool:
@@ -100,26 +100,25 @@ class Tucker(nn.Module):
         self.rank_factor = rank_factor
         self.rank_min = rank_min
         self.decompose = decompose
+        self.is_transposed = isinstance(m, ConvTranspose3d)
 
         self.add_to_cache = DecompositionAgent.save_model
 
+        self.ranks = self.get_ranks(m)
+        self.seq = self.get_tucker_net(m)
+
         if decompose and not DecompositionAgent.load_model:
-            self.ranks = self.get_ranks(m)
-            self.seq = self.get_tucker_net(m)
             self.set_weights(m)
-        else:
-            self.ranks = self.get_ranks(m)
-            self.seq = self.get_tucker_net(m)
 
         if verbose:
             eprint(
                 f'Decomposed layer with Tucker. '
                 f'[in, out] = [{m.in_channels:3d},  {m.out_channels:3d}] | '
-                f'core [in, out] = [{self.seq[1].weight.shape[1]:3d},  '
-                f'{self.seq[1].weight.shape[0]:3d}]'
+                f'core [in, out] = [{self.seq[1].in_channels:3d},  '
+                f'{self.seq[1].out_channels:3d}]'
             )
 
-    def get_ranks(self, m: nn.Module) -> tuple[int, int]:
+    def get_ranks(self, m: nn.Module) -> list[int, int]:
         if DecompositionAgent.load_model:
             return DecompositionAgent.rank_cache.pop(0)
 
@@ -146,7 +145,7 @@ class Tucker(nn.Module):
             raise ValueError(f'Rank mode {self.rank_mode} is unknown.')
 
         if self.rank_min is not None:
-            ranks = np.maximum(self.rank_min, ranks)
+            ranks = list(np.maximum(self.rank_min, ranks))
             ranks[1] = min(m.in_channels, ranks[1])
             ranks[0] = min(m.out_channels, ranks[0])
 
@@ -156,12 +155,14 @@ class Tucker(nn.Module):
         return ranks
 
     def get_tucker_net(self, m: nn.Module) -> nn.Sequential:
-        use_bias = False if m.bias is None else True
+        tucker_in = self.ranks[1]
+        tucker_out = self.ranks[0]
 
-        m_first = Conv3d(m.in_channels, int(self.ranks[1]), kernel_size=1, bias=False)
-        m_core = Conv3d(
-            in_channels=int(self.ranks[1]),
-            out_channels=int(self.ranks[0]),
+        use_bias = False if m.bias is None else True
+        m_first = Conv3d(m.in_channels, tucker_in, kernel_size=1, bias=False)
+        m_core = m.__class__(
+            in_channels=tucker_in,
+            out_channels=tucker_out,
             kernel_size=m.kernel_size,
             bias=False,
             stride=m.stride,
@@ -169,20 +170,28 @@ class Tucker(nn.Module):
             dilation=m.dilation,
             groups=m.groups,
         )
-        m_last = Conv3d(
-            int(self.ranks[0]), m.out_channels, kernel_size=1, bias=use_bias
-        )
-
+        m_last = Conv3d(tucker_out, m.out_channels, kernel_size=1, bias=use_bias)
         return nn.Sequential(m_first, m_core, m_last)
 
     def set_weights(self, m: nn.Module) -> None:
+        if self.is_transposed:
+            ranks = self.ranks.copy()
+            ranks.reverse()
+        else:
+            ranks = self.ranks
+
         (core, (last, first)), _ = partial_tucker(
-            tensor=m.weight.data.numpy(), modes=(0, 1), rank=self.ranks, init='svd'
+            tensor=m.weight.data.numpy(), modes=(0, 1), rank=ranks, init='svd'
         )
 
         core = torch.from_numpy(core)
         first = torch.from_numpy(first)
         last = torch.from_numpy(last)
+
+        if self.is_transposed:
+            temp = first
+            first = last
+            last = temp
 
         self.seq[0].weight.data = (
             torch.transpose(first, 1, 0).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)

@@ -290,8 +290,9 @@ def predict_from_raw_data(
                 overwrite_perform_everything_on_gpu = perform_everything_on_gpu
                 if perform_everything_on_gpu:
                     try:
+                        network_original = network
                         for params in parameters:
-                            network.load_state_dict(params)
+                            network_original.load_state_dict(params)
 
                             if MonkeyManager.apply_tucker:
                                 network = DecompositionAgent(
@@ -299,7 +300,9 @@ def predict_from_raw_data(
                                     ckpt_path=MonkeyManager.ckpt_path,
                                     save_model=MonkeyManager.save_model,
                                     load_model=MonkeyManager.load_model,
-                                )(network)
+                                )(deepcopy(network_original))
+                            else:
+                                network = network_original
 
                             if prediction is None:
                                 prediction = predict_sliding_window_return_logits(

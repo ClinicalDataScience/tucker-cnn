@@ -38,7 +38,7 @@ def main() -> None:
         monkey_patch.maybe_mirror_and_predict
     )
 
-    totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
+    totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
 
     Timer.report()
 
