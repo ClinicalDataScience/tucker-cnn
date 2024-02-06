@@ -17,14 +17,14 @@ BENCHMARK_ARGS = {
     'batch_size': 1,
     'device': 'cuda',
     'load_params': False,
-    'apply_tucker': True,
-    'autocast': False,
+    'apply_tucker': False,
+    'autocast': True,
     'compile': False,
     'eval_passes': 10,
     'ckpt_path': '.checkpoints/model.ckpt',
     'save_model': False,
     'load_model': False,
-    '3mm': False,
+    '3mm': True,
 }
 
 if __name__ == '__main__':
