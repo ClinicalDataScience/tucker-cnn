@@ -17,26 +17,44 @@ class MonkeyManager:
     load_model = False
 
 
-def maybe_load_checkpoint(nnunet_trainer: nnUNetTrainer, continue_training: bool, validation_only: bool,
-                          pretrained_weights_file: str = None):
+def maybe_load_checkpoint(
+    nnunet_trainer: nnUNetTrainer,
+    continue_training: bool,
+    validation_only: bool,
+    pretrained_weights_file: str = None,
+):
     if continue_training and pretrained_weights_file is not None:
-        raise RuntimeError('Cannot both continue a training AND load pretrained weights. Pretrained weights can only '
-                           'be used at the beginning of the training.')
+        raise RuntimeError(
+            'Cannot both continue a training AND load pretrained weights. Pretrained weights can only '
+            'be used at the beginning of the training.'
+        )
     if continue_training:
-        expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_final.pth')
+        expected_checkpoint_file = join(
+            nnunet_trainer.output_folder, 'checkpoint_final.pth'
+        )
         if not isfile(expected_checkpoint_file):
-            expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_latest.pth')
+            expected_checkpoint_file = join(
+                nnunet_trainer.output_folder, 'checkpoint_latest.pth'
+            )
         # special case where --c is used to run a previously aborted validation
         if not isfile(expected_checkpoint_file):
-            expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_best.pth')
+            expected_checkpoint_file = join(
+                nnunet_trainer.output_folder, 'checkpoint_best.pth'
+            )
         if not isfile(expected_checkpoint_file):
-            print(f"WARNING: Cannot continue training because there seems to be no checkpoint available to "
-                               f"continue from. Starting a new training...")
+            print(
+                f"WARNING: Cannot continue training because there seems to be no checkpoint available to "
+                f"continue from. Starting a new training..."
+            )
             expected_checkpoint_file = None
     elif validation_only:
-        expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_final.pth')
+        expected_checkpoint_file = join(
+            nnunet_trainer.output_folder, 'checkpoint_final.pth'
+        )
         if not isfile(expected_checkpoint_file):
-            raise RuntimeError(f"Cannot run validation because the training is not finished yet!")
+            raise RuntimeError(
+                f"Cannot run validation because the training is not finished yet!"
+            )
     else:
         if pretrained_weights_file is not None:
             if not nnunet_trainer.was_initialized:
@@ -51,7 +69,9 @@ def maybe_load_checkpoint(nnunet_trainer: nnUNetTrainer, continue_training: bool
                 )(deepcopy(nnunet_trainer.network))
                 nnunet_trainer.network = network
             else:
-                load_pretrained_weights(nnunet_trainer.network, pretrained_weights_file, verbose=True)
+                load_pretrained_weights(
+                    nnunet_trainer.network, pretrained_weights_file, verbose=True
+                )
         expected_checkpoint_file = None
 
     if expected_checkpoint_file is not None:

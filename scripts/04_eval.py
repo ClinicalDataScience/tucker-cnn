@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import numpy as np
 import nibabel as nib
@@ -13,11 +12,11 @@ IN_LABEL = "/mnt/ssd/work/lmu/code/data/totaltest/labelsTs"
 OUT_PATH = "/mnt/ssd/work/lmu/code/data/totaltest/output"
 DS = "total"
 
-#IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
-#OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
-#DS = "spleen"
+# IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
+# OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
+# DS = "spleen"
 
-#------------------------------------------------------
+# ------------------------------------------------------
 
 
 def main() -> None:
@@ -33,9 +32,9 @@ def main() -> None:
 
         try:
             seg_true = read_nii(label_dir / f"{subject2}.nii.gz")
-            seg_pred = read_nii(pred_dir / f"{subject}" /'spleen.nii.gz')
+            seg_pred = read_nii(pred_dir / f"{subject}" / 'spleen.nii.gz')
         except:
-            #print("SITK error in loading the mask, fallback nibabel")
+            # print("SITK error in loading the mask, fallback nibabel")
             seg_true = nib.load(label_dir / f"{subject2}.nii.gz").get_fdata()
             seg_pred = nib.load(pred_dir / f"{subject}" / 'spleen.nii.gz').get_fdata()
 
@@ -48,7 +47,8 @@ def main() -> None:
             tmp = "Empty gt mask"
         eprint(subject, f' Dice Score: {dc:.3f} ', tmp)
     eprint("Mean Dice Score: ", np.mean(dsc))
-        #break
+    # break
+
 
 if __name__ == "__main__":
     main()

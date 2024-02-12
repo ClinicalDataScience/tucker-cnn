@@ -21,10 +21,10 @@ IN_LABEL = "/mnt/ssd/work/lmu/code/data/totaltest/labelsTs"
 OUT_PATH = "/mnt/ssd/work/lmu/code/data/totaltest/output"
 DS = "total"
 
-#IN_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/imagesTr"
-#IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
-#OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
-#DS = "spleen"
+# IN_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/imagesTr"
+# IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
+# OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
+# DS = "spleen"
 
 MonkeyManager.apply_tucker = False
 MonkeyManager.inference_bs = 1
@@ -55,7 +55,11 @@ def main() -> None:
 
     for subject in tqdm(subjects):
         try:
-            totalsegmentator(input=gt_dir / f"{subject}.nii.gz", output=pred_dir / f"{subject}", fast=True)
+            totalsegmentator(
+                input=gt_dir / f"{subject}.nii.gz",
+                output=pred_dir / f"{subject}",
+                fast=True,
+            )
             Timer.report()
             try:
                 subject2 = subject
@@ -63,13 +67,14 @@ def main() -> None:
                     subject2 = subject.split("_")[0]
                 seg_true = read_nii(label_dir / f"{subject2}.nii.gz")
                 seg_true = np.where(seg_true == 1, 1, 0)
-                seg_pred = read_nii(pred_dir / f"{subject}" /'spleen.nii.gz')
+                seg_pred = read_nii(pred_dir / f"{subject}" / 'spleen.nii.gz')
                 eprint(f'Dice Score: {get_dice_score(seg_true, seg_pred):.3f}')
             except:
                 print("SITK error in loading the mask")
         except:
             pass
-        #break
+        # break
+
 
 if __name__ == "__main__":
     main()

@@ -134,3 +134,5 @@ output
 .checkpoints
 benchmark_results.csv
 tucker.tar*
+*.csv
+commands
