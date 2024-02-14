@@ -1,54 +1,62 @@
+from functools import partial
+import multiprocessing as mp
 from pathlib import Path
-import numpy as np
-import nibabel as nib
-from tuckercnn.utils import read_nii, get_dice_score
-from tuckercnn.utils import eprint
-from tqdm import tqdm
-from totalsegmentator.map_to_binary import class_map_5_parts
+
+import pandas as pd
+from totalsegmentator.map_to_binary import class_map
+
+from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance
 
 # PARAMETERS
 # --------------------------------------------------------------------------------------
-IN_LABEL = "/mnt/ssd/work/lmu/code/data/totaltest/labelsTs"
-OUT_PATH = "/mnt/ssd/work/lmu/code/data/totaltest/output"
-DS = "total"
+IN_LABEL = '/data/core-rad/data/tucker/raw/000-tdata/labelsTs'
+OUT_PATH = '<path_to_out>/output'
 
-# IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
-# OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
-# DS = "spleen"
-
-# ------------------------------------------------------
+CSV_PATH = 'inference_test.csv'
+NUM_WORKERS = mp.cpu_count()
+# --------------------------------------------------------------------------------------
 
 
 def main() -> None:
-    pred_dir = Path(OUT_PATH)
     label_dir = Path(IN_LABEL)
-    subjects = [x.stem for x in pred_dir.iterdir()]
+    pred_dir = Path(OUT_PATH)
 
-    dsc = []
-    for subject in subjects:
-        subject2 = subject
-        if DS == "total":
-            subject2 = subject.split("_")[0]
+    subject_ids = [entry.stem for entry in label_dir.iterdir()]
 
-        try:
-            seg_true = read_nii(label_dir / f"{subject2}.nii.gz")
-            seg_pred = read_nii(pred_dir / f"{subject}" / 'spleen.nii.gz')
-        except:
-            # print("SITK error in loading the mask, fallback nibabel")
-            seg_true = nib.load(label_dir / f"{subject2}.nii.gz").get_fdata()
-            seg_pred = nib.load(pred_dir / f"{subject}" / 'spleen.nii.gz').get_fdata()
+    func = partial(get_subject_metrics, label_dir=label_dir, pred_dir=pred_dir)
+    pool = mp.Pool(NUM_WORKERS)
+    results_list = pool.map_async(func, subject_ids)
+    pool.close()
+    pool.join()
 
-        seg_true = np.where(seg_true == 1, 1, 0)
-        dc = get_dice_score(seg_true, seg_pred)
-        tmp = None
-        if seg_true.sum() != 0:
-            dsc.append(dc)
+    df = pd.DataFrame.from_records(results_list)
+    df.to_csv(CSV_PATH)
+
+
+def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> dict:
+    results = {}
+
+    seg_true = read_nii(str(label_dir / f'{subject_id}.nii.gz'))
+
+    label_dict = class_map['total']
+    for idx, label_str in label_dict.items():
+        seg_true = (seg_true == idx).astype(int)
+        if seg_true.sum() == 0:
+            ds = -1
+            nsd = -1
         else:
-            tmp = "Empty gt mask"
-        eprint(subject, f' Dice Score: {dc:.3f} ', tmp)
-    eprint("Mean Dice Score: ", np.mean(dsc))
-    # break
+            pred_file = pred_dir / f'{subject_id}' / label_str + '.nii.gz'
+            seg_pred = read_nii(str(pred_file))
+
+            ds = get_dice_score(seg_true, seg_pred)
+            nsd = get_surface_distance(seg_true, seg_pred)
+
+        results.update(
+            {'subject_id': subject_id, 'label_str': label_str, 'ds': ds, 'nsd': nsd}
+        )
+
+    return results
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

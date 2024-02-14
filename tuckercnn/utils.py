@@ -1,27 +1,39 @@
 import sys
 
-import SimpleITK as sitk
+import nibabel as nib
+import numpy as np
 from dynamic_network_architectures.building_blocks.simple_conv_blocks import (
     ConvDropoutNormReLU,
 )
 from dynamic_network_architectures.building_blocks.unet_decoder import UNetDecoder
 from torch import nn
+from surface_distance import (
+    compute_surface_distances,
+    compute_surface_dice_at_tolerance,
+)
 
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def read_nii(path):
-    sitk_array = sitk.ReadImage(path, sitk.sitkFloat32)
-    return sitk.GetArrayFromImage(sitk_array)
+def read_nii(path: str) -> np.ndarray:
+    return nib.load(path).get_fdata()
 
 
-def get_dice_score(mask1, mask2):
-    overlap = (mask1 * mask2).sum()
-    sum = mask1.sum() + mask2.sum()
+def get_dice_score(gt: np.ndarray, pred: np.ndarray) -> float:
+    overlap = (gt * pred).sum()
+    sum = gt.sum() + pred.sum()
     dice_score = 2 * overlap / (sum + 1e-6)
-    return dice_score
+    return float(dice_score)
+
+
+def get_surface_distance(
+    gt: np.ndarray, pred: np.ndarray, spacing: float = 1.5, tolerance: float = 3
+) -> float:
+    sd = compute_surface_distances(gt, pred, [spacing] * 3)
+    nsd = compute_surface_dice_at_tolerance(sd, tolerance)
+    return float(nsd)
 
 
 def get_batch_iterable(iterable, n):

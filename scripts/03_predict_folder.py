@@ -68,7 +68,7 @@ def main() -> None:
                 seg_true = read_nii(label_dir / f"{subject2}.nii.gz")
                 seg_true = np.where(seg_true == 1, 1, 0)
                 seg_pred = read_nii(pred_dir / f"{subject}" / 'spleen.nii.gz')
-                eprint(f'Dice Score: {get_dice_score(seg_true, seg_pred):.3f}')
+                eprint(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
             except:
                 print("SITK error in loading the mask")
         except:

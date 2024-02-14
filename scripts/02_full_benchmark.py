@@ -39,8 +39,8 @@ BENCHMARK_ARGS = {
 def main() -> None:
     clear_file(OUT_FILE)
 
-    rank_factors = [0.01, 0.05, 0.1, 0.25, 0.5, 0.7, 0.9]
-    rank_mins = [None, 4, 8]
+    rank_factors = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9]
+    rank_mins = [8]
 
     boolean_keys = ['apply_tucker', 'autocast', 'compile', '3mm']
     batch_size_max = 100

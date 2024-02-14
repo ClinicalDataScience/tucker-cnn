@@ -44,7 +44,7 @@ def main() -> None:
 
     seg_true = read_nii(IN_LABEL)
     seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
-    print(f'Dice Score: {get_dice_score(seg_true, seg_pred):.3f}')
+    print(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
 
 
 if __name__ == "__main__":
