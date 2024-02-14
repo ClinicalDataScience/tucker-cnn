@@ -52,7 +52,7 @@ def main() -> None:
 
     # Exec and eval Tucker decomposition
     # ----------------------------------------------------------------------------------
-    mse_dict = {
+    metrics = {
         'name': [],
         'rank_0': [],
         'rank_1': [],
@@ -81,16 +81,16 @@ def main() -> None:
                     j = 1
                 rec_error, rel_error, energy_error = get_metrics(weight, ranks=(i, j))
 
-                mse_dict['name'].append(name)
-                mse_dict['rank_0'].append(i)
-                mse_dict['rank_1'].append(j)
-                mse_dict['rec_error'].append(rec_error)
-                mse_dict['rel_error'].append(rel_error)
-                mse_dict['energy_error'].append(energy_error)
-                mse_dict['fast'].append(FAST_MODEL)
+                metrics['name'].append(name)
+                metrics['rank_0'].append(i)
+                metrics['rank_1'].append(j)
+                metrics['rec_error'].append(rec_error)
+                metrics['rel_error'].append(rel_error)
+                metrics['energy_error'].append(energy_error)
+                metrics['fast'].append(FAST_MODEL)
 
-        df = pd.DataFrame.from_dict(mse_dict)
-        df.to_csv('tucker_error.csv')
+        df = pd.DataFrame.from_dict(metrics)
+        df.to_csv('tucker_error_2.csv')
 
 
 def get_metrics(
