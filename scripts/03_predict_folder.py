@@ -1,12 +1,11 @@
-from functools import partial
-import multiprocessing as mp
+import sys
 from pathlib import Path
+from typing import Sequence
 
 from nnunetv2.inference import predict_from_raw_data
 from nnunetv2.inference import sliding_window_prediction
 from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
-from tqdm import tqdm
 
 from tuckercnn import monkey_patch
 from tuckercnn.monkey_patch import MonkeyManager
@@ -14,7 +13,7 @@ from tuckercnn.timer import Timer
 
 # PARAMETERS
 # --------------------------------------------------------------------------------------
-IN_ROOT = '/data/core-rad/data/tucker/raw/000-tdata/imagesTs'
+#IN_ROOT = '/data/core-rad/data/tucker/raw/000-tdata/imagesTs'
 OUT_ROOT = '/data/core-rad/data/tucker_predictions'
 OUT_ID = 'test_run'
 
@@ -33,36 +32,30 @@ MonkeyManager.ckpt_path = ''
 MonkeyManager.save_model = False
 MonkeyManager.load_model = False
 Timer.verbose = False
-
-NUM_WORKERS = 8
-
-
 # --------------------------------------------------------------------------------------
 
 
-def main() -> None:
+def main(f_paths: Sequence[str]) -> None:
     libs.DummyFile = monkey_patch.DummyFile
     predict_from_raw_data.predict_from_raw_data = monkey_patch.predict_from_raw_data
     sliding_window_prediction.maybe_mirror_and_predict = (
         monkey_patch.maybe_mirror_and_predict
     )
 
-    gt_dir = Path(IN_ROOT)
     pred_dir = Path(OUT_ROOT) / OUT_ID
 
     pred_dir.mkdir(parents=True, exist_ok=True)
 
-    subject_ids = [subject.stem.split('.')[0] for subject in gt_dir.glob('*.nii.gz')]
-
-    for subject_id in tqdm(subject_ids):
-        run_totalsegmentator(subject_id, gt_dir, pred_dir)
+    for f_path in f_paths:
+        run_totalsegmentator(Path(f_path), pred_dir)
 
 
-def run_totalsegmentator(subject_id: str, gt_dir: Path, pred_dir: Path) -> None:
+def run_totalsegmentator(f_path: Path, pred_dir: Path) -> None:
+    subject_id = f_path.stem.split('.')[0]
     out_id = subject_id.replace('_0000', '')
 
     totalsegmentator(
-        input=gt_dir / f'{subject_id}.nii.gz',
+        input=f_path,
         output=pred_dir / f'{out_id}',
         fast=FAST_MODEL,
     )
@@ -71,4 +64,5 @@ def run_totalsegmentator(subject_id: str, gt_dir: Path, pred_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    f_paths = sys.argv[1:]
+    main(f_paths)
