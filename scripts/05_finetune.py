@@ -21,6 +21,8 @@ if __name__ == '__main__':
     run_args = ['', '300', '3d_fullres', '0', '-tr', 'nnUNetTrainerNoMirroring']
     run_args = ['', '001', '3d_fullres', '0', '-tr', 'nnUNetTrainerNoMirroring', '-pretrained_weights',
                 '/data/core-rad/data/tucker/results/Dataset291_TotalSegmentator_part1_organs_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth']
+    run_args = ['', '006', '3d_fullres', '0', '-tr', 'nnUNetTrainerNoMirroring', '-pretrained_weights',
+                '/data/core-rad/data/tucker/results/Dataset297_TotalSegmentator_total_3mm_1559subj/nnUNetTrainer_4000epochs_NoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth']
 
     with patch("sys.argv", run_args):
         run_training_entry()
