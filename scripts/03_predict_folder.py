@@ -1,30 +1,24 @@
-import os
+from functools import partial
+import multiprocessing as mp
 from pathlib import Path
-import numpy as np
+
 from nnunetv2.inference import predict_from_raw_data
 from nnunetv2.inference import sliding_window_prediction
 from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
+from tqdm import tqdm
 
 from tuckercnn import monkey_patch
 from tuckercnn.monkey_patch import MonkeyManager
-from tuckercnn.utils import read_nii, get_dice_score
 from tuckercnn.timer import Timer
-from tuckercnn.utils import eprint
-from tqdm import tqdm
-from totalsegmentator.map_to_binary import class_map_5_parts
 
 # PARAMETERS
 # --------------------------------------------------------------------------------------
-IN_PATH = "/mnt/ssd/work/lmu/code/data/totaltest/imagesTs"
-IN_LABEL = "/mnt/ssd/work/lmu/code/data/totaltest/labelsTs"
-OUT_PATH = "/mnt/ssd/work/lmu/code/data/totaltest/output"
-DS = "total"
+IN_ROOT = '/data/core-rad/data/tucker/raw/000-tdata/imagesTs'
+OUT_ROOT = '/data/core-rad/data/tucker_predictions'
+OUT_ID = 'test_run'
 
-# IN_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/imagesTr"
-# IN_LABEL = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/labelsTr"
-# OUT_PATH = "/mnt/ssd/work/lmu/code/data/Task09_Spleen/output"
-# DS = "spleen"
+FAST_MODEL = True
 
 MonkeyManager.apply_tucker = False
 MonkeyManager.inference_bs = 1
@@ -38,6 +32,11 @@ MonkeyManager.tucker_args = {
 MonkeyManager.ckpt_path = ''
 MonkeyManager.save_model = False
 MonkeyManager.load_model = False
+Timer.verbose = False
+
+NUM_WORKERS = 8
+
+
 # --------------------------------------------------------------------------------------
 
 
@@ -48,32 +47,27 @@ def main() -> None:
         monkey_patch.maybe_mirror_and_predict
     )
 
-    gt_dir = Path(IN_PATH)
-    pred_dir = Path(OUT_PATH)
-    label_dir = Path(IN_LABEL)
-    subjects = [x.stem.split(".")[0] for x in gt_dir.glob("*.nii.gz")]
+    gt_dir = Path(IN_ROOT)
+    pred_dir = Path(OUT_ROOT) / OUT_ID
 
-    for subject in tqdm(subjects):
-        try:
-            totalsegmentator(
-                input=gt_dir / f"{subject}.nii.gz",
-                output=pred_dir / f"{subject}",
-                fast=True,
-            )
-            Timer.report()
-            try:
-                subject2 = subject
-                if DS == "total":
-                    subject2 = subject.split("_")[0]
-                seg_true = read_nii(label_dir / f"{subject2}.nii.gz")
-                seg_true = np.where(seg_true == 1, 1, 0)
-                seg_pred = read_nii(pred_dir / f"{subject}" / 'spleen.nii.gz')
-                eprint(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
-            except:
-                print("SITK error in loading the mask")
-        except:
-            pass
-        # break
+    pred_dir.mkdir(parents=True, exist_ok=True)
+
+    subject_ids = [subject.stem.split('.')[0] for subject in gt_dir.glob('*.nii.gz')]
+
+    for subject_id in tqdm(subject_ids):
+        run_totalsegmentator(subject_id, gt_dir, pred_dir)
+
+
+def run_totalsegmentator(subject_id: str, gt_dir: Path, pred_dir: Path) -> None:
+    out_id = subject_id.replace('_0000', '')
+
+    totalsegmentator(
+        input=gt_dir / f'{subject_id}.nii.gz',
+        output=pred_dir / f'{out_id}',
+        fast=FAST_MODEL,
+    )
+
+    print(f'Subject {subject_id} done.')
 
 
 if __name__ == "__main__":
