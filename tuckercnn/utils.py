@@ -31,7 +31,7 @@ def get_dice_score(gt: np.ndarray, pred: np.ndarray) -> float:
 def get_surface_distance(
     gt: np.ndarray, pred: np.ndarray, spacing: float = 1.5, tolerance: float = 3
 ) -> float:
-    sd = compute_surface_distances(gt, pred, [spacing] * 3)
+    sd = compute_surface_distances(gt.astype(bool), pred.astype(bool), [spacing] * 3)
     nsd = compute_surface_dice_at_tolerance(sd, tolerance)
     return float(nsd)
 
