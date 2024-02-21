@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from totalsegmentator.map_to_binary import class_map
+from tqdm import tqdm
 
 from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance
 
@@ -12,7 +13,7 @@ from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance
 IN_LABEL = '/data/core-rad/data/tucker/raw/000-tdata/labelsTs'
 OUT_PATH = '/data/core-rad/data/tucker_predictions/test_run'
 
-CSV_PATH = 'inference_test.csv'
+CSV_PATH = 'results/inference_test.csv'
 NUM_WORKERS = 32
 # --------------------------------------------------------------------------------------
 
@@ -25,8 +26,13 @@ def main() -> None:
 
     func = partial(get_subject_metrics, label_dir=label_dir, pred_dir=pred_dir)
     pool = mp.Pool(NUM_WORKERS)
-    results_list = pool.map_async(func, subject_ids).get()
-    results_list = [item for sublist in results_list for item in sublist]
+    # results_list = pool.map_async(func, subject_ids).get()
+    # results_list = [item for sublist in results_list for item in sublist]
+    results_list = []
+    with tqdm(total=len(subject_ids)) as pbar:
+        for result in pool.imap_unordered(func, subject_ids):
+            results_list.append(result)
+            pbar.update(1)
     pool.close()
     pool.join()
 
@@ -43,7 +49,7 @@ def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> lis
     label_dict = class_map['total']
     for idx, label_str in label_dict.items():
         seg_mask = (seg_true == idx).astype(int)
-        if seg_true.sum() == 0:
+        if seg_mask.sum() == 0:
             ds = -1
             nsd = -1
         else:
@@ -57,7 +63,7 @@ def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> lis
             {'subject_id': subject_id, 'label_str': label_str, 'ds': ds, 'nsd': nsd}
         )
 
-    print(f'Subject {subject_id} done.')
+    tqdm.write(f'Subject {subject_id} done.')
     return results
 
 
