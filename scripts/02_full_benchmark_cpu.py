@@ -79,7 +79,6 @@ def main() -> None:
             runs_failed.append(False)
 
 
-
 def set_model_version(use_fast_model: bool = True):
     if use_fast_model:
         patch_size = (1, 112, 112, 128)

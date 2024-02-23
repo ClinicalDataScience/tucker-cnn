@@ -11,6 +11,7 @@ from surface_distance import (
     compute_surface_distances,
     compute_surface_dice_at_tolerance,
 )
+import yaml
 
 
 def eprint(*args, **kwargs):
@@ -19,6 +20,11 @@ def eprint(*args, **kwargs):
 
 def read_nii(path: str) -> np.ndarray:
     return nib.load(path).get_fdata()
+
+
+def read_yml(path: str) -> dict:
+    with open(path, 'r') as file:
+        return yaml.load(file, Loader=yaml.SafeLoader)
 
 
 def get_dice_score(gt: np.ndarray, pred: np.ndarray) -> float:

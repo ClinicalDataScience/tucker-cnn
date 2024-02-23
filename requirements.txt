@@ -5,4 +5,5 @@ tqdm
 SimpleITK
 scipy
 torchinfo
+pyyaml
 git+https://github.com/deepmind/surface-distance.git

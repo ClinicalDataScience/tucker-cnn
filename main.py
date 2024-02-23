@@ -1,12 +1,8 @@
 import os
 
-from nnunetv2.inference import predict_from_raw_data
-from nnunetv2.inference import sliding_window_prediction
-from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
 
-from tuckercnn import monkey_patch
-from tuckercnn.monkey_patch import MonkeyManager
+from tuckercnn import TuckerContext
 from tuckercnn.utils import read_nii, get_dice_score
 from tuckercnn.timer import Timer
 
@@ -16,29 +12,26 @@ IN_PATH = 'data/spleen/imagesTr/spleen_2.nii.gz'
 IN_LABEL = 'data/spleen/labelsTr/spleen_2.nii.gz'
 OUT_PATH = 'output'
 
-MonkeyManager.apply_tucker = True
-MonkeyManager.inference_bs = 1
-MonkeyManager.tucker_args = {
-    'rank_mode': 'relative',
-    'rank_factor': 1 / 3,
-    'rank_min': 16,
-    'decompose': True,
-    'verbose': True,
+TUCKER_CONFIG = {
+    'tucker_args': {
+        'rank_mode': 'relative',
+        'rank_factor': 1 / 3,
+        'rank_min': 16,
+        'decompose': True,
+        'verbose': True,
+    },
+    'apply_tucker': True,
+    'inference_bs': 1,
+    'ckpt_path': '',
+    'save_model': False,
+    'load_model': False,
 }
-MonkeyManager.ckpt_path = ''
-MonkeyManager.save_model = False
-MonkeyManager.load_model = False
 # --------------------------------------------------------------------------------------
 
 
 def main() -> None:
-    libs.DummyFile = monkey_patch.DummyFile
-    predict_from_raw_data.predict_from_raw_data = monkey_patch.predict_from_raw_data
-    sliding_window_prediction.maybe_mirror_and_predict = (
-        monkey_patch.maybe_mirror_and_predict
-    )
-
-    totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
+    with TuckerContext(TUCKER_CONFIG):
+        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
 
     Timer.report()
 

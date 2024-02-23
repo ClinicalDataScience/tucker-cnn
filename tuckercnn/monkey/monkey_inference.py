@@ -3,9 +3,8 @@ import shutil
 import traceback
 import warnings
 from copy import deepcopy
-from dataclasses import dataclass
 from time import sleep
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union
 
 import numpy as np
 import tensorly
@@ -41,21 +40,12 @@ from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
 from torch import nn
 
+from tuckercnn.monkey.config import MonkeyConfig
+from tuckercnn.timer import Timer
 from tuckercnn.tucker import DecompositionAgent
 from tuckercnn.utils import get_batch_iterable
-from tuckercnn.timer import Timer
 
 tensorly.set_backend('numpy')
-
-
-@dataclass
-class MonkeyManager:
-    tucker_args: Optional[dict] = None
-    apply_tucker = True
-    inference_bs = 1
-    ckpt_path = ''
-    save_model = False
-    load_model = False
 
 
 class DummyFile(object):
@@ -294,12 +284,12 @@ def predict_from_raw_data(
                         for params in parameters:
                             network_original.load_state_dict(params)
 
-                            if MonkeyManager.apply_tucker:
+                            if MonkeyConfig.apply_tucker:
                                 network = DecompositionAgent(
-                                    tucker_args=MonkeyManager.tucker_args,
-                                    ckpt_path=MonkeyManager.ckpt_path,
-                                    save_model=MonkeyManager.save_model,
-                                    load_model=MonkeyManager.load_model,
+                                    tucker_args=MonkeyConfig.tucker_args,
+                                    ckpt_path=MonkeyConfig.ckpt_path,
+                                    save_model=MonkeyConfig.save_model,
+                                    load_model=MonkeyConfig.load_model,
                                 )(deepcopy(network_original))
                             else:
                                 network = network_original
@@ -581,7 +571,7 @@ def predict_sliding_window_return_logits(
             finally:
                 empty_cache(device)
 
-            if MonkeyManager.inference_bs == 1:
+            if MonkeyConfig.inference_bs == 1:
                 for sl in slicers:
                     workon = data[sl][None]
                     workon = workon.to(device, non_blocking=False)
@@ -596,7 +586,7 @@ def predict_sliding_window_return_logits(
                     n_predictions[sl[1:]] += gaussian if use_gaussian else 1
 
             else:
-                for sl in get_batch_iterable(slicers, MonkeyManager.inference_bs):
+                for sl in get_batch_iterable(slicers, MonkeyConfig.inference_bs):
                     dd = [data[m][None] for m in sl]
                     workon = torch.cat(dd, dim=0)
                     workon = workon.to(device, non_blocking=False)

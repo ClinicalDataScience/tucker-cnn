@@ -1,0 +1,32 @@
+# -----------------------------------------------------------
+# NNUNET ENV VARS
+# -----------------------------------------------------------
+nnUNet_preprocessed: /data/core-rad/data/tucker/preprocessed
+nnUNet_raw: /data/core-rad/data/tucker/raw
+nnUNet_results: /data/core-rad/data/tucker/results
+
+# -----------------------------------------------------------
+# NNUNET TRAINING SETUP
+# -----------------------------------------------------------
+# dataset_id: '300'
+# pretrained_weights:None
+# dataset_id:'001'
+# pretrained_weights:'/data/core-rad/data/tucker/results/Dataset291_TotalSegmentator_part1_organs_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
+dataset_id : '006'
+pretrained_weights: '/data/core-rad/data/tucker/results/Dataset297_TotalSegmentator_total_3mm_1559subj/nnUNetTrainer_4000epochs_NoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
+
+# -----------------------------------------------------------
+# TUCKER CONFIG
+# -----------------------------------------------------------
+tucker_config:
+    tucker_args:
+        rank_mode: relative
+        rank_factor: 0.3
+        rank_min: 16
+        decompose: True
+        verbose: True
+    apply_tucker: True
+    inference_bs: 1
+    ckpt_path:
+    save_model: False
+    load_model: False
