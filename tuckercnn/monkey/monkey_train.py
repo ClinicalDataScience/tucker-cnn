@@ -1,17 +1,66 @@
-from copy import deepcopy
-
+import numpy as np
+import types
 import torch
+
+from torch.cuda.amp import GradScaler
+from torch.optim.lr_scheduler import _LRScheduler
+from torch._dynamo import OptimizedModule
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+from copy import deepcopy
+from tqdm import tqdm
+
 from batchgenerators.utilities.file_and_folder_operations import join, isfile
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
-from torch._dynamo import OptimizedModule
-from torch.cuda.amp import GradScaler
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.optim.lr_scheduler import _LRScheduler
 
 from tuckercnn.tucker import DecompositionAgent
 from tuckercnn.monkey.config import MonkeyConfig
 
+
 LR_FACTOR = 1
+
+
+def run_training(self):
+    self.on_train_start()
+
+    for epoch in range(self.current_epoch, self.num_epochs):
+        self.on_epoch_start()
+
+        # get initial score
+        if epoch == 0:
+            with torch.no_grad():
+                self.on_validation_epoch_start()
+                val_outputs = []
+                for batch_id in range(self.num_val_iterations_per_epoch):
+                    val_outputs.append(self.validation_step(next(self.dataloader_val)))
+                self.on_validation_epoch_end(val_outputs)
+                self.print_to_log_file('val_loss',
+                                       np.round(self.logger.my_fantastic_logging['val_losses'][-1], decimals=4))
+                self.print_to_log_file('Pseudo dice', [np.round(i, decimals=4) for i in
+                                                       self.logger.my_fantastic_logging['dice_per_class_or_region'][
+                                                           -1]])
+                self.print_to_log_file('Mean Pseudo dice', np.nanmean([i for i in
+                                                                       self.logger.my_fantastic_logging[
+                                                                           'dice_per_class_or_region'][-1]]))
+                self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
+                self.print_to_log_file(f"EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
+
+        self.on_train_epoch_start()
+        train_outputs = []
+        for batch_id in tqdm(range(self.num_iterations_per_epoch)):
+            train_outputs.append(self.train_step(next(self.dataloader_train)))
+        self.on_train_epoch_end(train_outputs)
+
+        with torch.no_grad():
+            self.on_validation_epoch_start()
+            val_outputs = []
+            for batch_id in range(self.num_val_iterations_per_epoch):
+                val_outputs.append(self.validation_step(next(self.dataloader_val)))
+            self.on_validation_epoch_end(val_outputs)
+
+        self.on_epoch_end()
+
+    self.on_train_end()
 
 
 def load_pretrained_weights(network, fname, verbose=False):
@@ -227,6 +276,10 @@ def maybe_load_checkpoint(
                 )  # TODO
             # nnunet_trainer.load_checkpoint(pretrained_weights_file)
         expected_checkpoint_file = None
+
+    # TODO
+    # patch train fn to print initial val dice pseudos
+    nnunet_trainer.run_training = types.MethodType(run_training, nnunet_trainer)
 
     if expected_checkpoint_file is not None:
         nnunet_trainer.load_checkpoint(expected_checkpoint_file)
