@@ -2,9 +2,6 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from nnunetv2.inference import predict_from_raw_data
-from nnunetv2.inference import sliding_window_prediction
-from totalsegmentator import libs
 from totalsegmentator.python_api import totalsegmentator
 
 from tuckercnn import TuckerContext
