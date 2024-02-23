@@ -1,5 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
-import multiprocessing as mp
 from pathlib import Path
 
 import pandas as pd
@@ -17,7 +17,6 @@ CSV_PATH = 'results/inference_test.csv'
 NUM_WORKERS = 32
 # --------------------------------------------------------------------------------------
 
-
 def main() -> None:
     label_dir = Path(IN_LABEL)
     pred_dir = Path(OUT_PATH)
@@ -25,16 +24,16 @@ def main() -> None:
     subject_ids = [entry.stem.split('.')[0] for entry in label_dir.iterdir()]
 
     func = partial(get_subject_metrics, label_dir=label_dir, pred_dir=pred_dir)
-    pool = mp.Pool(NUM_WORKERS)
-    # results_list = pool.map_async(func, subject_ids).get()
-    # results_list = [item for sublist in results_list for item in sublist]
-    results_list = []
-    with tqdm(total=len(subject_ids)) as pbar:
-        for result in pool.imap_unordered(func, subject_ids):
-            results_list.append(result)
-            pbar.update(1)
-    pool.close()
-    pool.join()
+
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        futures = {executor.submit(func, subject_id): subject_id for subject_id in
+                   subject_ids}
+
+        results_list = []
+        with tqdm(total=len(subject_ids)) as pbar:
+            for future in as_completed(futures):
+                results_list.extend(future.result())
+                pbar.update(1)
 
     df = pd.DataFrame.from_records(results_list)
     compute_mean_excluding_negatives(df)
