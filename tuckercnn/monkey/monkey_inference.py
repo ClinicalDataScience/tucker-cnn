@@ -594,7 +594,7 @@ def predict_sliding_window_return_logits(
                     prediction = maybe_mirror_and_predict(
                         network, workon, mirror_axes
                     ).to(results_device)
-                    for k in range(MonkeyManager.inference_bs):
+                    for k in range(MonkeyConfig.inference_bs):
                         predicted_logits[sl[k]] += (
                             prediction[k] * gaussian if use_gaussian else prediction[k]
                         )

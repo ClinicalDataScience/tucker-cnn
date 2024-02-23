@@ -1,8 +1,6 @@
 #!/bin/bash
 export TORCH_HOME=.cache
 
-#pip install -r requirements.txt
-#pip install -e .
 python --version
 
 export nnUNet_preprocessed=$HOME/.totalsegmentator/nnunet/results
@@ -10,14 +8,46 @@ export nnUNet_results=$HOME/.totalsegmentator/nnunet/results
 export nnUNet_raw=$HOME/.totalsegmentator/nnunet/results
 
 
-# Define the directory to list files from
-directory="/data/core-rad/data/tucker/raw/000-tdata/imagesTs"
+# Initialize variables for options
+configPath=""
+directoryPath=""
+numberOfWorkers=0
+
+# Usage message
+usage() {
+    echo "Usage: $0 -c <configPath> -d <directoryPath> -n <numberOfWorkers>"
+    exit 1
+}
+
+# Parse options
+while getopts "c:d:n:" opt; do
+    case ${opt} in
+        c )
+            configPath=$OPTARG
+            ;;
+        d )
+            directoryPath=$OPTARG
+            ;;
+        n )
+            numberOfWorkers=$OPTARG
+            ;;
+        \? )
+            usage
+            ;;
+    esac
+done
+
+# Check if options are provided
+if [ -z "$configPath" ] || [ -z "$directoryPath" ] || [ -z "$numberOfWorkers" ]; then
+    echo "All options -c, -d, and -n are required."
+    usage
+fi
 
 # Specify the number of chunks
-n_chunks=$1
+n_chunks=$numberOfWorkers
 
 # Read the file paths into an array
-readarray -d '' files < <(find "$directory" -type f -print0)
+readarray -d '' files < <(find "$directoryPath" -type f -print0)
 
 # Calculate the total number of files
 total_files=${#files[@]}
@@ -34,7 +64,7 @@ process_chunk_with_python_async() {
         args+=("${files[i]}")
     done
     # Call the Python script with the chunk of file paths and run it in the background
-    python3 scripts/03_predict_folder.py "${args[@]}" &
+    python3 scripts/03_predict_folder.py "$configPath" "${args[@]}" &
 }
 
 # Chunk the array and process each chunk with the Python script asynchronously
