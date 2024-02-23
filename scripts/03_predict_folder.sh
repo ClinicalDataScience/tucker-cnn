@@ -63,9 +63,12 @@ process_chunk_with_python_async() {
     for ((i=start; i<end && i<total_files; i++)); do
         args+=("${files[i]}")
     done
-    # Call the Python script with the chunk of file paths and run it in the background
+    # Call the Python script with the chunk of file paths and run it in the background, supress stdout and err with > /dev/null 2>&1 #>/dev/null 2>&1 &
     python3 scripts/03_predict_folder.py "$configPath" "${args[@]}" &
 }
+
+# Timer start
+start_time=$(date +%s)
 
 # Chunk the array and process each chunk with the Python script asynchronously
 for ((chunk=0; chunk<n_chunks; chunk++)); do
@@ -77,5 +80,10 @@ done
 
 # Optionally, wait for all background processes to complete
 wait
-echo "All Python scripts have completed."
+
+# Timer end
+end_time=$(date +%s)
+duration=$((end_time - start_time))
+
+echo "All Python scripts have completed in $duration seconds."
 
