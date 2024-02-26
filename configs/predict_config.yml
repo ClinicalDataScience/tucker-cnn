@@ -2,7 +2,11 @@
 # PATHS
 # -----------------------------------------------------------
 out_root: /data/core-rad/data/tucker_predictions
-out_id: test_run
+out_id: dummy_run
+
+label_root: /data/core-rad/data/tucker/raw/000-tdata/labelsTs
+metric_csv_path: results/inference_test.csv
+eval_workers: 32
 
 # -----------------------------------------------------------
 # TUCKER CONFIG
@@ -15,7 +19,7 @@ tucker_config:
         rank_min: 16
         decompose: True
         verbose: True
-    apply_tucker: True
+    apply_tucker: False
     inference_bs: 1
     ckpt_path:
     save_model: False

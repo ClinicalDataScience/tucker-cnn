@@ -1,3 +1,5 @@
+import sys
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 from pathlib import Path
@@ -6,26 +8,18 @@ import pandas as pd
 from totalsegmentator.map_to_binary import class_map
 from tqdm import tqdm
 
-from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance
+from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance, read_yml
 
-# PARAMETERS
-# --------------------------------------------------------------------------------------
-IN_LABEL = '/data/core-rad/data/tucker/raw/000-tdata/labelsTs'
-OUT_PATH = '/data/core-rad/data/tucker_predictions/test_run'
 
-CSV_PATH = 'results/inference_test.csv'
-NUM_WORKERS = 32
-# --------------------------------------------------------------------------------------
+def main(run_cfg: dict) -> None:
+    label_dir = Path(run_cfg['label_root'])
+    pred_dir = Path(run_cfg['out_root']) / Path(run_cfg['out_id'])
 
-def main() -> None:
-    label_dir = Path(IN_LABEL)
-    pred_dir = Path(OUT_PATH)
-
-    subject_ids = [entry.stem.split('.')[0] for entry in label_dir.iterdir()]
+    subject_ids = [entry.stem.split('.')[0] for entry in pred_dir.iterdir()]
 
     func = partial(get_subject_metrics, label_dir=label_dir, pred_dir=pred_dir)
 
-    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+    with ThreadPoolExecutor(max_workers=run_cfg['eval_workers']) as executor:
         futures = {executor.submit(func, subject_id): subject_id for subject_id in
                    subject_ids}
 
@@ -37,7 +31,7 @@ def main() -> None:
 
     df = pd.DataFrame.from_records(results_list)
     compute_mean_excluding_negatives(df)
-    df.to_csv(CSV_PATH)
+    df.to_csv(run_cfg['metric_csv_path'])
 
 
 def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> list:
@@ -69,8 +63,14 @@ def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> lis
 def compute_mean_excluding_negatives(df):
     filtered_df = df[(df['ds'] != -1) & (df['nsd'] != -1)]
     means = filtered_df.groupby('label_str')[['ds', 'nsd']].mean()
+
+    pd.set_option('display.max_rows', None)
     print(means)
+    pd.reset_option('display.max_rows')
 
 
 if __name__ == '__main__':
-    main()
+    cfg_path = sys.argv[1]
+
+    run_cfg = read_yml(cfg_path)
+    main(run_cfg)

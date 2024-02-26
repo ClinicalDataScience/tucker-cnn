@@ -12,15 +12,16 @@ export nnUNet_raw=$HOME/.totalsegmentator/nnunet/results
 configPath=""
 directoryPath=""
 numberOfWorkers=0
+runEval=false
 
 # Usage message
 usage() {
-    echo "Usage: $0 -c <configPath> -d <directoryPath> -n <numberOfWorkers>"
+    echo "Usage: $0 -c <configPath> -d <directoryPath> -n <numberOfWorkers> -e"
     exit 1
 }
 
 # Parse options
-while getopts "c:d:n:" opt; do
+while getopts "c:d:n:e" opt; do
     case ${opt} in
         c )
             configPath=$OPTARG
@@ -30,6 +31,9 @@ while getopts "c:d:n:" opt; do
             ;;
         n )
             numberOfWorkers=$OPTARG
+            ;;
+        e )
+            runEval=true
             ;;
         \? )
             usage
@@ -85,5 +89,9 @@ wait
 end_time=$(date +%s)
 duration=$((end_time - start_time))
 
-echo "All Python scripts have completed in $duration seconds."
+echo "All prediction scripts have completed in $duration seconds."
 
+if [ "$runEval" = true ]; then
+    echo "Running evaluation script ..."
+    python3 scripts/04_eval.py "$configPath"
+fi
