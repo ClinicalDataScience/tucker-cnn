@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+import warnings
 
 import numpy as np
 import tensorly
@@ -30,10 +31,17 @@ class DecompositionAgent:
         self.tucker_args = tucker_args
         self.ckpt_path = ckpt_path
 
-        assert not (save_model and load_model)
         DecompositionAgent.rank_cache.clear()
         DecompositionAgent.save_model = save_model
         DecompositionAgent.load_model = load_model
+
+        if save_model and load_model and not os.path.exists(self.ckpt_path):
+            warnings.warn(
+                'Model saving and loading was both set to True, but '
+                'checkpoint does not exist yet. Setting "load_model" to False.',
+                UserWarning,
+            )
+            DecompositionAgent.load_model = False
 
     def __call__(self, model: nn.Module) -> nn.Module:
         return self.apply(model)
@@ -102,7 +110,9 @@ class Tucker(nn.Module):
         self.decompose = decompose
         self.is_transposed = isinstance(m, ConvTranspose3d)
 
-        self.add_to_cache = DecompositionAgent.save_model
+        self.add_to_cache = (
+            DecompositionAgent.save_model and not DecompositionAgent.load_model
+        )
 
         self.ranks = self.get_ranks(m)
         self.seq = self.get_tucker_net(m)

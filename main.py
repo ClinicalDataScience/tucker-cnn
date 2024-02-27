@@ -22,16 +22,16 @@ TUCKER_CONFIG = {
     },
     'apply_tucker': True,
     'inference_bs': 1,
-    'ckpt_path': '',
-    'save_model': False,
-    'load_model': False,
+    'ckpt_path': 'checkpoints/tucker_test.pt',
+    'save_model': True,
+    'load_model': True,
 }
 # --------------------------------------------------------------------------------------
 
 
 def main() -> None:
     with TuckerContext(TUCKER_CONFIG):
-        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
+        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
 
     Timer.report()
 

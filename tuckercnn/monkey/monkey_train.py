@@ -34,16 +34,36 @@ def run_training(self):
                 for batch_id in range(self.num_val_iterations_per_epoch):
                     val_outputs.append(self.validation_step(next(self.dataloader_val)))
                 self.on_validation_epoch_end(val_outputs)
-                self.print_to_log_file('val_loss',
-                                       np.round(self.logger.my_fantastic_logging['val_losses'][-1], decimals=4))
-                self.print_to_log_file('Pseudo dice', [np.round(i, decimals=4) for i in
-                                                       self.logger.my_fantastic_logging['dice_per_class_or_region'][
-                                                           -1]])
-                self.print_to_log_file('Mean Pseudo dice', np.nanmean([i for i in
-                                                                       self.logger.my_fantastic_logging[
-                                                                           'dice_per_class_or_region'][-1]]))
+                self.print_to_log_file(
+                    'val_loss',
+                    np.round(
+                        self.logger.my_fantastic_logging['val_losses'][-1], decimals=4
+                    ),
+                )
+                self.print_to_log_file(
+                    'Pseudo dice',
+                    [
+                        np.round(i, decimals=4)
+                        for i in self.logger.my_fantastic_logging[
+                            'dice_per_class_or_region'
+                        ][-1]
+                    ],
+                )
+                self.print_to_log_file(
+                    'Mean Pseudo dice',
+                    np.nanmean(
+                        [
+                            i
+                            for i in self.logger.my_fantastic_logging[
+                                'dice_per_class_or_region'
+                            ][-1]
+                        ]
+                    ),
+                )
                 self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
-                self.print_to_log_file(f"EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
+                self.print_to_log_file(
+                    f"EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}"
+                )
 
         self.on_train_epoch_start()
         train_outputs = []

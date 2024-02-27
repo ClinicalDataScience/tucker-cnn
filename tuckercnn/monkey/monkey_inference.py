@@ -3,6 +3,7 @@ import shutil
 import traceback
 import warnings
 from copy import deepcopy
+import re
 from time import sleep
 from typing import Tuple, Union
 
@@ -281,9 +282,27 @@ def predict_from_raw_data(
                 if perform_everything_on_gpu:
                     try:
                         network_original = network
+
+                        # ------------------------------
+                        # MONKEY:
+                        match = re.search(r"Dataset(\d+)", model_training_output_dir)
+                        ds_str = ('_ds' + match.group(1)) if match else ''
+                        if MonkeyConfig.save_model:
+                            if hasattr(MonkeyConfig, 'orig_ckpt_path'):
+                                MonkeyConfig.ckpt_path = MonkeyConfig.orig_ckpt_path
+                            base_name, extension = os.path.splitext(
+                                MonkeyConfig.ckpt_path
+                            )
+                            new_ckpt_path = f'{base_name}{ds_str}{extension}'
+                            MonkeyConfig.orig_ckpt_path = MonkeyConfig.ckpt_path
+                            MonkeyConfig.ckpt_path = new_ckpt_path
+                        # ------------------------------
+
                         for params in parameters:
                             network_original.load_state_dict(params)
 
+                            # ------------------------------
+                            # MONKEY:
                             if MonkeyConfig.apply_tucker:
                                 network = DecompositionAgent(
                                     tucker_args=MonkeyConfig.tucker_args,
@@ -293,6 +312,7 @@ def predict_from_raw_data(
                                 )(deepcopy(network_original))
                             else:
                                 network = network_original
+                            # ------------------------------
 
                             if prediction is None:
                                 prediction = predict_sliding_window_return_logits(

@@ -20,8 +20,9 @@ def main(run_cfg: dict) -> None:
     func = partial(get_subject_metrics, label_dir=label_dir, pred_dir=pred_dir)
 
     with ThreadPoolExecutor(max_workers=run_cfg['eval_workers']) as executor:
-        futures = {executor.submit(func, subject_id): subject_id for subject_id in
-                   subject_ids}
+        futures = {
+            executor.submit(func, subject_id): subject_id for subject_id in subject_ids
+        }
 
         results_list = []
         with tqdm(total=len(subject_ids)) as pbar:
