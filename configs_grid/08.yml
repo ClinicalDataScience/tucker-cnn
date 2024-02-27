@@ -1,0 +1,26 @@
+# -----------------------------------------------------------
+# PATHS
+# -----------------------------------------------------------
+out_root: /data/core-rad/data/tucker_predictions
+out_id: grid_8
+
+label_root: /data/core-rad/data/tucker/raw/000-tdata/labelsTs
+metric_csv_path: results_grid/08.csv
+eval_workers: 32
+
+# -----------------------------------------------------------
+# TUCKER CONFIG
+# -----------------------------------------------------------
+fast_model: False
+tucker_config:
+    tucker_args:
+        rank_mode: relative
+        rank_factor: 0.05
+        rank_min: 8
+        decompose: True
+        verbose: True
+    apply_tucker: True
+    inference_bs: 1
+    ckpt_path: /tmp/08_tucker_grid.pt
+    save_model: True
+    load_model: True

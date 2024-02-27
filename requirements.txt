@@ -1,4 +1,4 @@
-totalsegmentator
+totalsegmentator==2.0.5
 tensorly
 fvcore
 tqdm
@@ -6,4 +6,4 @@ SimpleITK
 scipy
 torchinfo
 pyyaml
-git+https://github.com/deepmind/surface-distance.git
+git+https://github.com/deepmind/surface-distance.git@master#egg=surface-distance
