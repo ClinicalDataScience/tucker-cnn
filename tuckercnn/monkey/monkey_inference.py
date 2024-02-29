@@ -247,6 +247,7 @@ def predict_from_raw_data(
         num_processes_segmentation_export
     ) as export_pool:
         network = network.to(device)
+        network_original = network
 
         r = []
         with torch.no_grad():
@@ -281,8 +282,6 @@ def predict_from_raw_data(
                 overwrite_perform_everything_on_gpu = perform_everything_on_gpu
                 if perform_everything_on_gpu:
                     try:
-                        network_original = network
-
                         # ------------------------------
                         # MONKEY:
                         match = re.search(r"Dataset(\d+)", model_training_output_dir)
