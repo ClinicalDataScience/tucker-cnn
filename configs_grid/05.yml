@@ -21,6 +21,6 @@ tucker_config:
         verbose: True
     apply_tucker: True
     inference_bs: 1
-    ckpt_path: /tmp/05_tucker_grid.pt
-    save_model: True
+    ckpt_path: checkpoints/05.pt
+    save_model: False
     load_model: True

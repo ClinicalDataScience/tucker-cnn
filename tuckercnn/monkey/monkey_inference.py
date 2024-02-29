@@ -287,7 +287,7 @@ def predict_from_raw_data(
                         # MONKEY:
                         match = re.search(r"Dataset(\d+)", model_training_output_dir)
                         ds_str = ('_ds' + match.group(1)) if match else ''
-                        if MonkeyConfig.save_model:
+                        if MonkeyConfig.save_model or MonkeyConfig.load_model:
                             if hasattr(MonkeyConfig, 'orig_ckpt_path'):
                                 MonkeyConfig.ckpt_path = MonkeyConfig.orig_ckpt_path
                             base_name, extension = os.path.splitext(
