@@ -1,4 +1,7 @@
+from dataclasses import dataclass
+
 import numpy as np
+import os
 import types
 import torch
 
@@ -14,16 +17,19 @@ from batchgenerators.utilities.file_and_folder_operations import join, isfile
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
 from tuckercnn.tucker import DecompositionAgent
-from tuckercnn.monkey.config import MonkeyConfig
-
-
-LR_FACTOR = 1
+from tuckercnn.monkey.config import MonkeyConfig, MonkeyTrainConfig
 
 
 def run_training(self):
     self.on_train_start()
 
-    for epoch in range(self.current_epoch, self.num_epochs):
+    print(
+        '~' * 10
+        + f' Starting finetuning with {MonkeyTrainConfig.epochs} epochs. '
+        + '~' * 10
+    )
+
+    for epoch in range(0, MonkeyTrainConfig.epochs):
         self.on_epoch_start()
 
         # get initial score
@@ -207,16 +213,54 @@ class DummyScheduler(_LRScheduler):  # TODO
 
 
 def configure_optimizers(nntrainer):  # TODO
-    nntrainer.initial_lr = nntrainer.initial_lr * LR_FACTOR
-    optimizer = torch.optim.SGD(
-        nntrainer.network.parameters(),
-        nntrainer.initial_lr,
-        weight_decay=nntrainer.weight_decay,
-        momentum=0.99,
-        nesterov=True,
-    )
+    nntrainer.initial_lr = MonkeyTrainConfig.learning_rate
+
+    if MonkeyTrainConfig.optimizer == 'adam':
+        print('Using ADAM optimizer.')
+        optimizer = torch.optim.AdamW(
+            nntrainer.network.parameters(),
+            nntrainer.initial_lr,
+            weight_decay=nntrainer.weight_decay,
+        )
+    else:
+        optimizer = torch.optim.SGD(
+            nntrainer.network.parameters(),
+            nntrainer.initial_lr,
+            weight_decay=nntrainer.weight_decay,
+            momentum=0.99,
+            nesterov=True,
+        )
     lr_scheduler = DummyScheduler(optimizer, nntrainer.initial_lr, nntrainer.num_epochs)
     return optimizer, lr_scheduler
+
+
+def save_checkpoint(self, filename: str) -> None:
+    if self.local_rank == 0:
+        if not self.disable_checkpointing:
+            # ------------------------------
+            # MONKEY:
+            if MonkeyConfig.save_model:
+                ds_str = '_ds' + MonkeyTrainConfig.dataset_id
+
+                if hasattr(MonkeyConfig, 'orig_ckpt_path'):
+                    MonkeyConfig.ckpt_path = MonkeyConfig.orig_ckpt_path
+                base_name, extension = os.path.splitext(MonkeyConfig.ckpt_path)
+                new_ckpt_path = f'{base_name}{ds_str}{extension}'
+                MonkeyConfig.orig_ckpt_path = MonkeyConfig.ckpt_path
+                MonkeyConfig.ckpt_path = new_ckpt_path
+
+                with torch.no_grad():
+                    network_traced = torch.jit.trace(
+                        self.network.module if self.is_ddp else self.network,
+                        torch.rand(*MonkeyTrainConfig.tracing_patch_size).cuda(),
+                        strict=False,
+                    )
+                network_traced.save(MonkeyConfig.ckpt_path)
+                print(f'Tucker model saved under "{MonkeyConfig.ckpt_path}".')
+            # ------------------------------
+
+        else:
+            self.print_to_log_file('No checkpoint written, checkpointing is disabled')
 
 
 def maybe_load_checkpoint(
@@ -262,6 +306,8 @@ def maybe_load_checkpoint(
             if not nnunet_trainer.was_initialized:
                 nnunet_trainer.initialize()
 
+            # ------------------------------
+            # MONKEY:
             if MonkeyConfig.apply_tucker:
                 load_pretrained_weights(
                     nnunet_trainer.network, pretrained_weights_file, verbose=True
@@ -271,9 +317,6 @@ def maybe_load_checkpoint(
                 # print(nnunet_trainer.network)
                 network = DecompositionAgent(
                     tucker_args=MonkeyConfig.tucker_args,
-                    ckpt_path=MonkeyConfig.ckpt_path,
-                    save_model=MonkeyConfig.save_model,
-                    load_model=MonkeyConfig.load_model,
                 )(deepcopy(nnunet_trainer.network))
                 nnunet_trainer.network = network
                 # print(nnunet_trainer.network)
@@ -284,6 +327,7 @@ def maybe_load_checkpoint(
                     configure_optimizers(nnunet_trainer)
                 )  # TODO
                 nnunet_trainer.network.train()
+            # ------------------------------
             else:
                 load_pretrained_weights(
                     nnunet_trainer.network, pretrained_weights_file, verbose=True
@@ -300,6 +344,9 @@ def maybe_load_checkpoint(
     # TODO
     # patch train fn to print initial val dice pseudos
     nnunet_trainer.run_training = types.MethodType(run_training, nnunet_trainer)
+
+    # Insert custom checkpointing method
+    nnunet_trainer.save_checkpoint = types.MethodType(save_checkpoint, nnunet_trainer)
 
     if expected_checkpoint_file is not None:
         nnunet_trainer.load_checkpoint(expected_checkpoint_file)

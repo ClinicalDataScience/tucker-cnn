@@ -17,13 +17,13 @@ TUCKER_CONFIG = {
         'rank_mode': 'relative',
         'rank_factor': 1 / 3,
         'rank_min': 16,
-        'decompose': True,
+        'decompose': False,
         'verbose': True,
     },
     'apply_tucker': True,
     'inference_bs': 1,
     'ckpt_path': 'checkpoints/tucker_test.pt',
-    'save_model': True,
+    'save_model': False,
     'load_model': True,
 }
 # --------------------------------------------------------------------------------------

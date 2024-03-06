@@ -30,9 +30,6 @@ def exec_benchmark(
     if benchmark_args['apply_tucker']:
         network = DecompositionAgent(
             tucker_args=tucker_args,
-            ckpt_path=benchmark_args['ckpt_path'],
-            save_model=benchmark_args['save_model'],
-            load_model=benchmark_args['load_model'],
         )(network)
 
     network = streamline_nnunet_architecture(network)

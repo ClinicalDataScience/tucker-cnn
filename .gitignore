@@ -137,3 +137,4 @@ tucker.tar*
 *.csv
 commands
 plots
+results*

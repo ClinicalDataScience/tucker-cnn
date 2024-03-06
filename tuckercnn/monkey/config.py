@@ -26,3 +26,12 @@ class MonkeyConfig:
     ckpt_path: str
     save_model: bool
     load_model: bool
+
+
+@dataclass
+class MonkeyTrainConfig:
+    dataset_id: str
+    epochs: int
+    learning_rate: float
+    optimizer: str
+    tracing_patch_size: tuple[int, ...] = (1, 1, 128, 128, 128)

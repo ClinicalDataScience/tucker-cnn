@@ -44,7 +44,7 @@ from torch import nn
 from tuckercnn.monkey.config import MonkeyConfig
 from tuckercnn.timer import Timer
 from tuckercnn.tucker import DecompositionAgent
-from tuckercnn.utils import get_batch_iterable
+from tuckercnn.utils import get_batch_iterable, eprint
 
 tensorly.set_backend('numpy')
 
@@ -303,12 +303,27 @@ def predict_from_raw_data(
                             # ------------------------------
                             # MONKEY:
                             if MonkeyConfig.apply_tucker:
-                                network = DecompositionAgent(
-                                    tucker_args=MonkeyConfig.tucker_args,
-                                    ckpt_path=MonkeyConfig.ckpt_path,
-                                    save_model=MonkeyConfig.save_model,
-                                    load_model=MonkeyConfig.load_model,
-                                )(deepcopy(network_original))
+
+                                if MonkeyConfig.load_model:
+                                    network = torch.jit.load(MonkeyConfig.ckpt_path)
+                                    eprint(
+                                        f'Tucker model checkpoint loaded from "{MonkeyConfig.ckpt_path}".'
+                                    )
+                                else:
+                                    network = DecompositionAgent(
+                                        tucker_args=MonkeyConfig.tucker_args,
+                                    )(deepcopy(network_original))
+
+                                if MonkeyConfig.save_model:
+                                    with torch.no_grad():
+                                        network_traced = torch.jit.trace(
+                                            network,
+                                            (torch.rand(1, 1, 128, 128, 128).cuda()),
+                                        )
+                                    network_traced.save(MonkeyConfig.ckpt_path)
+                                    eprint(
+                                        f'Tucker model saved under "{MonkeyConfig.ckpt_path}".'
+                                    )
                             else:
                                 network = network_original
                             # ------------------------------
@@ -598,6 +613,14 @@ def predict_sliding_window_return_logits(
                     prediction = maybe_mirror_and_predict(network, workon, mirror_axes)[
                         0
                     ].to(results_device)
+
+                    # ------------------------------
+                    # MONKEY:
+                    # I have no clue why a finetuned checkpoint suddenly has
+                    # an additional leading dimension of 1 and at this point I give up.
+                    if len(prediction.shape) == 5 and prediction.shape[0] == 1:
+                        prediction = prediction.squeeze(0)
+                    # ------------------------------
 
                     predicted_logits[sl] += (
                         prediction * gaussian if use_gaussian else prediction
