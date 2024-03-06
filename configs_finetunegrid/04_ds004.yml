@@ -1,0 +1,17 @@
+dataset_id: '004'
+epochs: 50
+learning_rate: 0.0001
+optimizer: adam
+pretrained_weights: /data/core-rad/data/tucker/results/Dataset294_TotalSegmentator_part4_muscles_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
+tucker_config:
+  apply_tucker: true
+  ckpt_path: checkpoints/04.pt
+  inference_bs: 1
+  load_model: false
+  save_model: true
+  tucker_args:
+    decompose: true
+    rank_factor: 0.4
+    rank_min: 8
+    rank_mode: relative
+    verbose: true

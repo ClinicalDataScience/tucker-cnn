@@ -27,6 +27,11 @@ def read_yml(path: str) -> dict:
         return yaml.load(file, Loader=yaml.SafeLoader)
 
 
+def save_yml(data, filename):
+    with open(filename, 'w') as file:
+        yaml.dump(data, file, default_flow_style=False)
+
+
 def get_dice_score(gt: np.ndarray, pred: np.ndarray) -> float:
     overlap = (gt * pred).sum()
     sum = gt.sum() + pred.sum()
