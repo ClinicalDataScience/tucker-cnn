@@ -30,14 +30,24 @@ TUCKER_CONFIG = {
 
 
 def main() -> None:
-    with TuckerContext(TUCKER_CONFIG):
-        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
+    import sys
+    from tuckercnn.utils import read_yml
+    cfg_path = sys.argv[1]
+    run_cfg = read_yml(cfg_path)
+    run_cfg['tucker_config']['save_model'] = True
+    run_cfg['tucker_config']['load_model'] = False
 
-    Timer.report()
+    with TuckerContext(run_cfg['tucker_config']):
+        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=run_cfg['fast_model'])
 
-    seg_true = read_nii(IN_LABEL)
-    seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
-    print(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
+    # with TuckerContext(TUCKER_CONFIG):
+    #     totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
+    #
+    # Timer.report()
+    #
+    # seg_true = read_nii(IN_LABEL)
+    # seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
+    # print(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
 
 
 if __name__ == "__main__":
