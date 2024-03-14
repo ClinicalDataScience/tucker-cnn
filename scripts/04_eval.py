@@ -10,6 +10,34 @@ from tqdm import tqdm
 
 from tuckercnn.utils import read_nii, get_dice_score, get_surface_distance, read_yml
 
+FAST_REMAP = {
+    'rib_right_4': 'rib_left_1',
+    'rib_right_3': 'rib_left_2',
+    'rib_left_1': 'rib_left_3',
+    'rib_left_2': 'rib_left_4',
+    'rib_left_3': 'rib_left_5',
+    'rib_left_4': 'rib_left_6',
+    'rib_left_5': 'rib_left_7',
+    'rib_left_6': 'rib_left_8',
+    'rib_left_7': 'rib_left_9',
+    'rib_left_8': 'rib_left_10',
+    'rib_left_9': 'rib_left_11',
+    'rib_left_10': 'rib_left_12',
+    'rib_left_11': 'rib_right_1',
+    'rib_left_12': 'rib_right_2',
+    'rib_right_1': 'rib_right_3',
+    'rib_right_2': 'rib_right_4',
+    'rib_right_5': 'rib_right_5',
+    'rib_right_6': 'rib_right_6',
+    'rib_right_7': 'rib_right_7',
+    'rib_right_8': 'rib_right_8',
+    'rib_right_9': 'rib_right_9',
+    'rib_right_10': 'rib_right_10',
+    'rib_right_11': 'rib_right_11',
+    'rib_right_12': 'rib_right_12'
+}
+FAST_REMAP = {v: k for k, v in FAST_REMAP.items()}
+
 
 def main(run_cfg: dict) -> None:
     label_dir = Path(run_cfg['label_root'])
@@ -47,8 +75,13 @@ def get_subject_metrics(subject_id: str, label_dir: Path, pred_dir: Path) -> lis
             ds = -1
             nsd = -1
         else:
-            pred_file = pred_dir / f'{subject_id}' / (label_str + '.nii.gz')
-            seg_pred = read_nii(str(pred_file))
+            if run_cfg['fast_model']:
+                pred_file = FAST_REMAP.get(label_str, label_str) + '.nii.gz'
+            else:
+                pred_file = label_str + '.nii.gz'
+
+            pred_path = pred_dir / f'{subject_id}' / pred_file
+            seg_pred = read_nii(str(pred_path))
 
             ds = get_dice_score(seg_mask, seg_pred)
             nsd = get_surface_distance(seg_mask, seg_pred)

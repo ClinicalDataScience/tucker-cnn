@@ -1,6 +1,6 @@
 dataset_id: '001'
 epochs: 50
-learning_rate: 0.0001
+learning_rate: 1.0e-05
 optimizer: adam
 pretrained_weights: /data/core-rad/data/tucker/results/Dataset291_TotalSegmentator_part1_organs_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
 tucker_config:

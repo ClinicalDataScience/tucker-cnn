@@ -8,4 +8,3 @@ export nnUNet_raw="/data/core-rad/data/tucker/raw"
 export nnUNet_n_proc_DA=32
 
 python "$@"
-

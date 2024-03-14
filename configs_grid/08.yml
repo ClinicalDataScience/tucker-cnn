@@ -1,7 +1,7 @@
 # -----------------------------------------------------------
 # PATHS
 # -----------------------------------------------------------
-out_root: /data/core-rad/data/tucker_predictions
+out_root: /data/core-rad/data/tucker_predictions/zero
 out_id: grid_8
 
 label_root: /data/core-rad/data/tucker/raw/000-tdata/labelsTs

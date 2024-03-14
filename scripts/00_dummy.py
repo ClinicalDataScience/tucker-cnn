@@ -35,5 +35,6 @@ def main() -> None:
         if hasattr(MonkeyConfig, 'orig_ckpt_path'):
             delattr(MonkeyConfig, 'orig_ckpt_path')
 
+
 if __name__ == '__main__':
     main()

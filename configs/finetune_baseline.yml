@@ -22,7 +22,7 @@ pretrained_weights: '/data/core-rad/data/tucker/results/Dataset293_TotalSegmenta
 #pretrained_weights: '/data/core-rad/data/tucker/results/Dataset297_TotalSegmentator_total_3mm_1559subj/nnUNetTrainer_4000epochs_NoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
 
 epochs: 50
-learning_rate: 0.0001
+learning_rate: 0.00001
 optimizer: adam
 
 # -----------------------------------------------------------
