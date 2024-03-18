@@ -8,6 +8,7 @@ import torch
 from tensorly.decomposition import partial_tucker
 from torch import nn
 from torch.nn import Conv3d, ConvTranspose3d
+from torch.nn.utils import prune
 
 import tuckercnn.VBMF as VBMF
 
@@ -20,8 +21,8 @@ class DecompositionAgent:
     rank_cache: list[tuple[int, int]] = []
 
     def __init__(
-        self,
-        tucker_args: Optional[dict] = None,
+            self,
+            tucker_args: Optional[dict] = None,
     ):
         self.tucker_args = tucker_args
 
@@ -49,21 +50,21 @@ class LayerReplacer:
         return isinstance(m, self.targets)
 
     def get_replacement(self, m: nn.Module) -> nn.Module:
-        if isinstance(m, Tucker):
-            return m
-        else:
-            return Tucker(m, **self.tucker_args)
+        prune_factor = 1 - self.tucker_args['rank_factor']
+        eprint('PRUNING WITH ', prune_factor)
+        m = prune.ln_structured(m, 'weight', amount=prune_factor, dim=1, n=2)
+        return m
 
 
 class Tucker(nn.Module):
     def __init__(
-        self,
-        m: nn.Module,
-        rank_mode: str = 'relative',
-        rank_factor: Optional[float] = 1 / 3,
-        rank_min: Optional[int] = None,
-        decompose: bool = True,
-        verbose: bool = True,
+            self,
+            m: nn.Module,
+            rank_mode: str = 'relative',
+            rank_factor: Optional[float] = 1 / 3,
+            rank_min: Optional[int] = None,
+            decompose: bool = True,
+            verbose: bool = True,
     ):
         super().__init__()
         self.rank_mode = rank_mode
@@ -89,7 +90,7 @@ class Tucker(nn.Module):
     def get_ranks(self, m: nn.Module) -> list[int, int]:
         if self.rank_mode == 'relative':
             assert (
-                self.rank_factor is not None
+                    self.rank_factor is not None
             ), 'Argument rank_cr must be set when choosing rank_mode "relative".'
 
             new_in = int(np.ceil(m.in_channels * self.rank_factor))
@@ -101,7 +102,7 @@ class Tucker(nn.Module):
 
         elif self.rank_mode == 'fixed':
             assert (
-                self.rank_min is not None
+                    self.rank_min is not None
             ), 'Argument rank_min must be set when choosing rank_mode "fixed".'
 
             ranks = [self.rank_min] * 2

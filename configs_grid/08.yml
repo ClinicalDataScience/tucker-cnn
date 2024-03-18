@@ -1,7 +1,7 @@
 # -----------------------------------------------------------
 # PATHS
 # -----------------------------------------------------------
-out_root: /data/core-rad/data/tucker_predictions/zero
+out_root: /data/core-rad/data/tucker_predictions/prune
 out_id: grid_8
 
 label_root: /data/core-rad/data/tucker/raw/000-tdata/labelsTs
@@ -23,4 +23,4 @@ tucker_config:
     inference_bs: 1
     ckpt_path: checkpoints/08.pt
     save_model: False
-    load_model: True
+    load_model: False
