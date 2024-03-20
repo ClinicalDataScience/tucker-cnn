@@ -5,7 +5,7 @@ optimizer: adam
 pretrained_weights: /data/core-rad/data/tucker/results/Dataset297_TotalSegmentator_total_3mm_1559subj/nnUNetTrainer_4000epochs_NoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth
 tucker_config:
   apply_tucker: true
-  ckpt_path: checkpoints_finetune/07_fast.pt
+  ckpt_path: checkpoints_prune/07_fast.pt
   inference_bs: 1
   load_model: false
   save_model: true

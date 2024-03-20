@@ -15,14 +15,14 @@ OUT_PATH = 'output'
 TUCKER_CONFIG = {
     'tucker_args': {
         'rank_mode': 'relative',
-        'rank_factor': 0.4,
+        'rank_factor': 0.05,
         'rank_min': 16,
         'decompose': False,
         'verbose': True,
     },
     'apply_tucker': True,
     'inference_bs': 1,
-    'ckpt_path': 'checkpoints/tucker_test.pt',
+    'ckpt_path': 'checkpoints_prune/04.pt',
     'save_model': False,
     'load_model': False,
 }
@@ -31,7 +31,7 @@ TUCKER_CONFIG = {
 
 def main() -> None:
     with TuckerContext(TUCKER_CONFIG):
-        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
+        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=False)
 
     Timer.report()
 

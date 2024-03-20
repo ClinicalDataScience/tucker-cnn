@@ -12,7 +12,7 @@ from torch.nn.utils import prune
 
 import tuckercnn.VBMF as VBMF
 
-from tuckercnn.utils import eprint
+from tuckercnn.utils import eprint, streamline_nnunet_architecture
 
 tensorly.set_backend('numpy')
 
@@ -31,9 +31,23 @@ class DecompositionAgent:
 
     def apply(self, model: nn.Module) -> nn.Module:
         model = model.cpu()
+        model = streamline_nnunet_architecture(model)
 
         replacer = LayerReplacer(tucker_args=self.tucker_args)
         LayerSurgeon(replacer).operate(model)
+
+        param_count = 0
+        for m in model.modules():
+            if hasattr(m, 'weight_mask'):
+                param_count += int(torch.sum(m.weight_mask))
+            elif hasattr(m, 'weight'):
+                param_count += m.weight.numel()
+
+            if hasattr(m, 'bias'):
+                param_count += m.bias.numel()
+
+        param_count = param_count / 1e6
+        eprint('NUMBER OF PARAMETERS: {:.2f}M'.format(param_count))
 
         if torch.cuda.is_available():
             model = model.cuda()
@@ -50,6 +64,8 @@ class LayerReplacer:
         return isinstance(m, self.targets)
 
     def get_replacement(self, m: nn.Module) -> nn.Module:
+        if m.in_channels == 1 or hasattr(m, 'weight_mask'):
+            return m
         prune_factor = 1 - self.tucker_args['rank_factor']
         eprint('PRUNING WITH ', prune_factor)
         m = prune.ln_structured(m, 'weight', amount=prune_factor, dim=1, n=2)
