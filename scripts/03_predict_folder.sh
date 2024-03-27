@@ -68,7 +68,7 @@ process_chunk_with_python_async() {
         args+=("${files[i]}")
     done
     # Call the Python script with the chunk of file paths and run it in the background, supress stdout and err with > /dev/null 2>&1 #>/dev/null 2>&1 &
-    python3 scripts/03_predict_folder.py "$configPath" "${args[@]}" &
+    python3 scripts/03_predict_files.py "$configPath" "${args[@]}" &
 }
 
 # Timer start

@@ -29,7 +29,7 @@ BENCHMARK_ARGS = {
     'autocast': False,
     'compile': False,
     'eval_passes': 10,
-    'ckpt_path': '.checkpoints/model.ckpt',
+    'ckpt_path': '',
     'save_model': False,
     'load_model': False,
     '3mm': False,

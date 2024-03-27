@@ -1,11 +1,11 @@
 # -----------------------------------------------------------
 # PATHS
 # -----------------------------------------------------------
-out_root: /data/core-rad/data/tucker_predictions
+out_root: tucker_predictions
 out_id: dummy_run
 
-label_root: /data/core-rad/data/tucker/raw/000-tdata/labelsTs
-metric_csv_path: results/inference_test.csv
+label_root: <path to your labels>
+metric_csv_path: inference.csv
 eval_workers: 32
 
 # -----------------------------------------------------------

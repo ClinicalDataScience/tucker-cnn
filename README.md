@@ -114,5 +114,45 @@ It is contained in `example/example.py`.
 We recommend to execute it via the supplied `run.sh`, as this sets the required
 environment variables correctly:
 ```shell
-./example/run.sh
+./run.sh example/example.py
 ```
+
+## How to handle Datasets
+
+#TBD
+
+### TotalSegmentator Datasets
+
+#TBD
+
+
+## Scripts
+
+We provide a directory `scripts` with different utilities to further investigate the
+behavior of Tucker-decomposition, to reproduce our experiments and to aid the handling
+of `TotalSegmentator`.
+We recommend to launch the scripts via the `run.sh` file like `./run.sh <path-to-py-file>`
+
+- `00_setup_ts.py`: Downloads the 3mm model and the organ 1.5mm model, which is the
+necessary setup for benchmarking GPU performance.
+- `01_single_benchmark.py`: Executes a single benchmark for one Tucker configuration.
+- `02_full_benchmark.py`: Executes a series of benchmark for a grid of parameters.
+- `03_predict_files.py`: Perform prediction using a Tucker-decomposed model on a series of
+files. The script is called like `python 03_predict_files.py <path-to-config-file> <path-to-file-1> ... <path-to-file-n>`.
+An example for a config file is in `configs/predict_config.yml`.
+- `03_predict_folder.sh`: The downside of the above python file is its limit to being single-threaded.
+You can't really use multiprocessing to load all the separate files, as one of PyTorch's
+requirements consists of it being executed in the main process. This shell script circumvents
+this issue, as it will split the files of a directory into separate chunks and passes them
+to detached python processes.
+- `04_eval.py'`: The previous script does only compute the predictions. This script
+checks the achieved Dice and NSD scores. The metrics are saved in a `.csv` file.
+The script takes the path to a config file like `configs/predict_config.yml` as the first
+argument.
+- `05_finetune.py`: This script allows to fine-tune a Tucker-decomposed network. It takes a
+config file as an argument. An example config file is `configs/finetune_baseline.yml`.
+- `06_tucker_rec_error.py`: Compute different reconstruction errors of the Tucker approximation
+over a grid of various core tensor dimensions.
+
+Additionally, the directory `visualization` provides code for the reproduction of 
+the figures and graphs used in our paper.
