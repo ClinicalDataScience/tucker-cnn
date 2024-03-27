@@ -1,25 +1,8 @@
 # -----------------------------------------------------------
 # NNUNET TRAINING SETUP
 # -----------------------------------------------------------
-# dataset_id: '300'
-# pretrained_weights: None
-#dataset_id: '001'
-#pretrained_weights: '/data/core-rad/data/tucker/results/Dataset291_TotalSegmentator_part1_organs_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
-
-#dataset_id: '002'
-#pretrained_weights: '/data/core-rad/data/tucker/results/Dataset292_TotalSegmentator_part2_vertebrae_1532subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
-#
-dataset_id: '003'
-pretrained_weights: '/data/core-rad/data/tucker/results/Dataset293_TotalSegmentator_part3_cardiac_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
-#
-#dataset_id: '004'
-#pretrained_weights: '/data/core-rad/data/tucker/results/Dataset294_TotalSegmentator_part4_muscles_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
-#
-#dataset_id: '005'
-#pretrained_weights: '/data/core-rad/data/tucker/results/Dataset295_TotalSegmentator_part5_ribs_1559subj/nnUNetTrainerNoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
-
-#dataset_id : '006'
-#pretrained_weights: '/data/core-rad/data/tucker/results/Dataset297_TotalSegmentator_total_3mm_1559subj/nnUNetTrainer_4000epochs_NoMirroring__nnUNetPlans__3d_fullres/fold_0/checkpoint_final.pth'
+dataset_id: <your dataset id>
+pretrained_weights: <path to pretrained weights>
 
 epochs: 50
 learning_rate: 0.00001
