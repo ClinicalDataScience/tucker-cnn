@@ -7,6 +7,7 @@ from totalsegmentator import libs
 
 from tuckercnn.monkey import monkey_inference, monkey_train
 from tuckercnn.monkey.config import MonkeyConfig, DEFAULT_CONFIG_DICT
+from tuckercnn.timer import Timer
 
 MONKEY_PATCHES = {
     (libs, 'DummyFile'): monkey_inference.DummyFile,
@@ -54,6 +55,8 @@ class TuckerContext:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        Timer.report()
+
         self.restore_config()
         for (module, func_name), original_func in self.originals.items():
             setattr(module, func_name, original_func)

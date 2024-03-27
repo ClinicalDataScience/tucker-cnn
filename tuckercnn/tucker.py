@@ -1,6 +1,4 @@
-import os
 from typing import Optional
-import warnings
 
 import numpy as np
 import tensorly
@@ -9,7 +7,6 @@ from tensorly.decomposition import partial_tucker
 from torch import nn
 from torch.nn import Conv3d, ConvTranspose3d
 
-import tuckercnn.VBMF as VBMF
 
 from tuckercnn.utils import eprint
 
@@ -20,8 +17,8 @@ class DecompositionAgent:
     rank_cache: list[tuple[int, int]] = []
 
     def __init__(
-        self,
-        tucker_args: Optional[dict] = None,
+            self,
+            tucker_args: Optional[dict] = None,
     ):
         self.tucker_args = tucker_args
 
@@ -57,13 +54,13 @@ class LayerReplacer:
 
 class Tucker(nn.Module):
     def __init__(
-        self,
-        m: nn.Module,
-        rank_mode: str = 'relative',
-        rank_factor: Optional[float] = 1 / 3,
-        rank_min: Optional[int] = None,
-        decompose: bool = True,
-        verbose: bool = True,
+            self,
+            m: nn.Module,
+            rank_mode: str = 'relative',
+            rank_factor: Optional[float] = 1 / 3,
+            rank_min: Optional[int] = None,
+            decompose: bool = True,
+            verbose: bool = True,
     ):
         super().__init__()
         self.rank_mode = rank_mode
@@ -89,19 +86,16 @@ class Tucker(nn.Module):
     def get_ranks(self, m: nn.Module) -> list[int, int]:
         if self.rank_mode == 'relative':
             assert (
-                self.rank_factor is not None
+                    self.rank_factor is not None
             ), 'Argument rank_cr must be set when choosing rank_mode "relative".'
 
             new_in = int(np.ceil(m.in_channels * self.rank_factor))
             new_out = int(np.ceil(m.out_channels * self.rank_factor))
             ranks = [new_out, new_in]
 
-        elif self.rank_mode == 'vmbf':
-            ranks = estimate_ranks(m)
-
         elif self.rank_mode == 'fixed':
             assert (
-                self.rank_min is not None
+                    self.rank_min is not None
             ), 'Argument rank_min must be set when choosing rank_mode "fixed".'
 
             ranks = [self.rank_min] * 2
@@ -164,20 +158,6 @@ class Tucker(nn.Module):
 
     def forward(self, x):
         return self.seq(x)
-
-
-def estimate_ranks(layer):
-    """Unfold the 2 modes of the Tensor the decomposition will
-    be performed on, and estimates the ranks of the matrices using VBMF
-    """
-
-    weights = layer.weight.data.numpy()
-    unfold_0 = tensorly.base.unfold(weights, 0)
-    unfold_1 = tensorly.base.unfold(weights, 1)
-    _, diag_0, _, _ = VBMF.EVBMF(unfold_0)
-    _, diag_1, _, _ = VBMF.EVBMF(unfold_1)
-    ranks = [diag_0.shape[0], diag_1.shape[1]]
-    return ranks
 
 
 class LayerSurgeon:

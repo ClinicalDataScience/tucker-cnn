@@ -4,7 +4,6 @@ from totalsegmentator.python_api import totalsegmentator
 
 from tuckercnn import TuckerContext
 from tuckercnn.utils import read_nii, get_dice_score
-from tuckercnn.timer import Timer
 
 # PARAMETERS
 # --------------------------------------------------------------------------------------
@@ -22,32 +21,20 @@ TUCKER_CONFIG = {
     },
     'apply_tucker': True,
     'inference_bs': 1,
-    'ckpt_path': 'checkpoints/tucker_test.pt',
+    'ckpt_path': '',
     'save_model': False,
-    'load_model': True,
+    'load_model': False,
 }
 # --------------------------------------------------------------------------------------
 
 
 def main() -> None:
-    import sys
-    from tuckercnn.utils import read_yml
-    cfg_path = sys.argv[1]
-    run_cfg = read_yml(cfg_path)
-    run_cfg['tucker_config']['save_model'] = True
-    run_cfg['tucker_config']['load_model'] = False
+    with TuckerContext(TUCKER_CONFIG):
+        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
 
-    with TuckerContext(run_cfg['tucker_config']):
-        totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=run_cfg['fast_model'])
-
-    # with TuckerContext(TUCKER_CONFIG):
-    #     totalsegmentator(input=IN_PATH, output=OUT_PATH, fast=True)
-    #
-    # Timer.report()
-    #
-    # seg_true = read_nii(IN_LABEL)
-    # seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
-    # print(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
+    seg_true = read_nii(IN_LABEL)
+    seg_pred = read_nii(os.path.join(OUT_PATH, 'spleen.nii.gz'))
+    print(f'Dice Score: {get_dice_score(seg_true, seg_pred) :.3f}')
 
 
 if __name__ == "__main__":
