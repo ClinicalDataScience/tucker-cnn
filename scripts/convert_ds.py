@@ -17,8 +17,7 @@ total_remap = { 'spleen': 1, 'kidney_right': 2, 'kidney_left': 3, 'gallbladder':
 
 def generate_json_from_dir_v2(foldername, subjects_train, subjects_val, labels):
     print("Creating dataset.json...")
-    os.environ['nnUNet_raw']= "/data/core-rad/data/tucker/raw/"
-    os.environ['nnUNet_preprocessed']= "/data/core-rad/data/tucker/preprocessed/"
+    print("nnUNet env vars: ", os.environ['nnUNet_raw'], os.environ['nnUNet_preprocessed'])
     out_base = Path(os.environ['nnUNet_raw']) / foldername
 
     json_dict = {}
@@ -76,25 +75,30 @@ if __name__ == "__main__":
     You must set nnUNet_raw and nnUNet_preprocessed environment variables before running this (see nnUNet documentation).
     """
 
-    dataset_path = Path("/data/core-rad/data/totalsegmentator") #Path(sys.argv[1])  # directory containing all the subjects
-    nnunet_path = Path("/data/core-rad/data/tucker/raw/008-lowres-remapped") #Path(sys.argv[2])  # directory of the new nnunet dataset
+    dataset_path = Path(sys.argv[1])  # directory containing all the subjects ie "/data/core-rad/data/totalsegmentator"
+    nnunet_path = Path(sys.argv[2])  # directory of the new nnunet dataset ie "/data/core-rad/data/tucker/raw/008-lowres-remapped
+    class_map_name = Path(sys.argv[3])
     # TotalSegmentator is made up of 5 models. Choose which one you want to produce. Choose from:
     #   class_map_part_organs
     #   class_map_part_vertebrae
     #   class_map_part_cardiac
     #   class_map_part_muscles
     #   class_map_part_ribs
-    class_map_name = "class_map_part_organs" #sys.argv[3]
+    # Or for the 1.5mm lowres model 
+    #   total
+    class_map_name = "class_map_part_organs" 
     class_map_name = "class_map_part_vertebrae"
     class_map_name = "class_map_part_cardiac"
     class_map_name = "class_map_part_muscles"
     class_map_name = "class_map_part_ribs"
     class_map_name = "total"
     
-    #class_map = class_map_5_parts[class_map_name]
-    class_map = class_map[class_map_name]
-    class_map = {value: key for key, value in total_remap.items()} # switch key and value pair
-
+    if class_map_name == "total":   
+        class_map = class_map[class_map_name]
+        class_map = {value: key for key, value in total_remap.items()} # There was a bug in the classmap in our TS version so we remapped the labels
+    else:
+        class_map = class_map_5_parts[class_map_name]
+    
     (nnunet_path / "imagesTr").mkdir(parents=True, exist_ok=True)
     (nnunet_path / "labelsTr").mkdir(parents=True, exist_ok=True)
     (nnunet_path / "imagesTs").mkdir(parents=True, exist_ok=True)
