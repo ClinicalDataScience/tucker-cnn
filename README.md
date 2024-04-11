@@ -119,11 +119,11 @@ environment variables correctly:
 
 ## How to handle Datasets
 
-#TBD
+The general data handling follows the nnUNet concepts. For that you have to create a raw, preprocessed and results folder and set the nnUNet environment variables according the description in the [nnUNet repository](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/set_environment_variables.md). Datasets are created in the raw folder and are then preproccessed with the corresponding nnUNet preprocess scripts. 
 
 ### TotalSegmentator Datasets
 
-#TBD
+Download the TotalSegmentator data from [zenodo](https://zenodo.org/records/10047292). Then create a dataset folder ie. Dataset095-Organ. Run the the script `convert_ds.py <source_path> <destination_path> <label_map>` to combine the masks and copy the files to the folder. For that you need to set the nnUNet environment variables. The label_map in our example case would be `class_map_part_organs`. After that you have to run the nnUNet [preprocess scripts](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/how_to_use_nnunet.md) ie. `nnUNetv2_plan_and_preprocess -d 095`. For the 3mm weights you will need to resample the data. This can be done similarly to our notebook file `notebooks/resample_lowres.ipynb`.
 
 
 ## Scripts
