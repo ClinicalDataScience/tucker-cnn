@@ -1,6 +1,6 @@
-# Decomposing 3D U-nets for Accelerating Segmentation Inference and Increased Accessibility
+# Post-Training Network Compression for 3D Medical Image Segmentation: Reducing Computational Efforts via Tucker Decomposition
 
-Code for the paper *Decomposing 3D U-nets for Accelerating Segmentation Inference and Increased Accessibility*.
+Code for the paper *Post-Training Network Compression for 3D Medical Image Segmentation: Reducing Computational Efforts via Tucker Decomposition*.
 
 >**Purpose**
 We address the computational bottlenecks of deploying advanced deep learning segmentation models in clinical settings by investigating the efficacy of network compression through tensor decomposition.
