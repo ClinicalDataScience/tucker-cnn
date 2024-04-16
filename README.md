@@ -1,22 +1,8 @@
 # Post-Training Network Compression for 3D Medical Image Segmentation: Reducing Computational Efforts via Tucker Decomposition
 
-Code for the paper *Post-Training Network Compression for 3D Medical Image Segmentation: Reducing Computational Efforts via Tucker Decomposition*.
+Code for the paper [*Post-Training Network Compression for 3D Medical Image Segmentation: Reducing Computational Efforts via Tucker Decomposition*](https://arxiv.org/pdf/2404.09683.pdf).
 
->**Purpose**
-We address the computational bottlenecks of deploying advanced deep learning segmentation models in clinical settings by investigating the efficacy of network compression through tensor decomposition.
-We introduce a method that applies Tucker factorization post-training, enabling the decomposition of pre-existing models to reduce computational requirements without fundamentally impacting segmentation accuracy.\
-**Materials and Methods**
-We applied Tucker decomposition to the convolutional kernels of the TotalSegmentator (TS) model, a nnU-Net model trained on a comprehensive dataset for automatic segmentation of 117 anatomical structures.
-Our approach reduces the floating-point operations (FLOPs) and memory required during inference, offering a customizable balance between computational efficiency and achieved segmentation quality.
-This study utilized the publicly available TS dataset, employing various downsampling factors to explore the trade-off between model size, inference speed, and segmentation performance.\
-**Results**
-The application of Tucker decomposition to the TS model demonstrated substantial reductions in model parameters and FLOPs across various downsampling factors, with limited loss in segmentation accuracy.
-For instance, up to 94\% of the model's parameters could be removed without significant effects on performance in the majority of classes, subject to fine-tuning.
-The practical benefits varied across different GPU architectures, with more distinct speed-ups on less powerful hardware.\
-**Conclusion**
-Post-hoc network compression via Tucker decomposition presents a viable strategy for reducing the computational demands of foundation medical image segmentation models without substantially sacrificing accuracy.
-This approach enables the broader adoption of advanced DL technologies in clinical practice, offering a way to navigate the constraints of hardware capabilities.
-
+> We address the computational barrier of deploying advanced deep learning segmentation models in clinical settings by studying the efficacy of network compression through tensor decomposition. We propose a post-training Tucker factorization that enables the decomposition of pre-existing models to reduce computational requirements without impeding segmentation accuracy. We applied Tucker decomposition to the convolutional kernels of the TotalSegmentator (TS) model, an nnU-Net model trained on a comprehensive dataset for automatic segmentation of 117 anatomical structures. Our approach reduced the floating-point operations (FLOPs) and memory required during inference, offering an adjustable trade-off between computational efficiency and segmentation quality. This study utilized the publicly available TS dataset, employing various downsampling factors to explore the relationship between model size, inference speed, and segmentation performance. The application of Tucker decomposition to the TS model substantially reduced the model parameters and FLOPs across various compression rates, with limited loss in segmentation accuracy. We removed up to 88% of the model's parameters with no significant performance changes in the majority of classes after fine-tuning. Practical benefits varied across different graphics processing unit (GPU) architectures, with more distinct speed-ups on less powerful hardware. Post-hoc network compression via Tucker decomposition presents a viable strategy for reducing the computational demand of medical image segmentation models without substantially sacrificing accuracy. This approach enables the broader adoption of advanced deep learning technologies in clinical practice, offering a way to navigate the constraints of hardware capabilities. 
 
 ## Introduction
 
